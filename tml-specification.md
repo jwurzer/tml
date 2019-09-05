@@ -1,5 +1,8 @@
+
 TML - Tiny Markup Language
 ==========================
+
+Specification:
 
 TML is a human-readable smart data-serialization language. Something like YAML, JSON, XML.
 
@@ -67,11 +70,4 @@ Objects can be nested like the following example:
 			links = 6
 			numbers = 4 2 8 0 2 4
 
-
-
-License
--------
-TML is dual-licensed in public domain and zlib license.
-
-For more information about the licences for TML see the [LICENSE](LICENSE) file.
 
