@@ -9,7 +9,7 @@ namespace cfg
 	{
 		// return -1 for not found or not allowed
 		int getRuleIndex(const std::string& ruleName, std::size_t curRuleIndex,
-				const SearchRule* rules, std::size_t rulesSize,
+				const SelectRule* rules, std::size_t rulesSize,
 				bool allowRandomSequence)
 		{
 			if (curRuleIndex < rulesSize && ruleName == rules[curRuleIndex].mName) {
@@ -18,7 +18,7 @@ namespace cfg
 			// first search after the current rule index is also allowed
 			// if random sequence is false because the sequence is unchanged.
 			// Only some rules can be skipped.
-			// If a rule should not be skipped then SearchRule::RULE_MUST_EXIST
+			// If a rule should not be skipped then SelectRule::RULE_MUST_EXIST
 			// should be used.
 			for (std::size_t i = curRuleIndex + 1; i < rulesSize; i++) {
 				if (ruleName == rules[i].mName) {
@@ -353,7 +353,7 @@ int cfg::Value::objectGetAttrIndex(const std::string &attrName) const
 	return -1;
 }
 
-int cfg::Value::objectSearch(const SearchRule *rules,
+int cfg::Value::objectGet(const SelectRule *rules,
 		bool allowRandomSequence,
 		bool allowUnusedValuePairs, bool allowEarlyReturn,
 		bool allowDuplicatedNames,
@@ -363,39 +363,39 @@ int cfg::Value::objectSearch(const SearchRule *rules,
 	std::size_t rulesSize = 0;
 	unsigned int finalMustExistCount = 0;
 	unsigned int currentMustExistCount = 0;
-	while (rules[rulesSize].mType != SearchRule::TYPE_UNKNOWN) {
+	while (rules[rulesSize].mType != SelectRule::TYPE_UNKNOWN) {
 		if (rules[rulesSize].mStorePtr.mPtr) {
 			switch (rules[rulesSize].mType) {
-				case SearchRule::TYPE_UNKNOWN:
+				case SelectRule::TYPE_UNKNOWN:
 					break;
-				case SearchRule::TYPE_NULL:
+				case SelectRule::TYPE_NULL:
 					*rules[rulesSize].mStorePtr.mNull = false;
 					break;
-				case SearchRule::TYPE_BOOL:
+				case SelectRule::TYPE_BOOL:
 					*rules[rulesSize].mStorePtr.mBool = false;
 					break;
-				case SearchRule::TYPE_FLOAT:
+				case SelectRule::TYPE_FLOAT:
 					*rules[rulesSize].mStorePtr.mFloat = 0.0f;
 					break;
-				case SearchRule::TYPE_DOUBLE:
+				case SelectRule::TYPE_DOUBLE:
 					*rules[rulesSize].mStorePtr.mDouble = 0.0;
 					break;
-				case SearchRule::TYPE_INT:
+				case SelectRule::TYPE_INT:
 					*rules[rulesSize].mStorePtr.mInt = 0;
 					break;
-				case SearchRule::TYPE_UINT:
+				case SelectRule::TYPE_UINT:
 					*rules[rulesSize].mStorePtr.mUInt = 0;
 					break;
-				case SearchRule::TYPE_STRING:
+				case SelectRule::TYPE_STRING:
 					rules[rulesSize].mStorePtr.mStr->clear();
 					break;
-				case SearchRule::TYPE_OBJECT:
+				case SelectRule::TYPE_OBJECT:
 					*rules[rulesSize].mStorePtr.mObject = nullptr;
 					break;
-				case SearchRule::TYPE_VALUE:
+				case SelectRule::TYPE_VALUE:
 					*rules[rulesSize].mStorePtr.mValue = nullptr;
 					break;
-				case SearchRule::TYPE_VALUE_PAIR:
+				case SelectRule::TYPE_VALUE_PAIR:
 					*rules[rulesSize].mStorePtr.mValuePair = nullptr;
 					break;
 			}
@@ -403,7 +403,7 @@ int cfg::Value::objectSearch(const SearchRule *rules,
 		if (rules[rulesSize].mUsedCount) {
 			*rules[rulesSize].mUsedCount = 0;
 		}
-		if (rules[rulesSize].mRule == SearchRule::RULE_MUST_EXIST) {
+		if (rules[rulesSize].mRule == SelectRule::RULE_MUST_EXIST) {
 			++finalMustExistCount;
 		}
 		++rulesSize;
@@ -475,7 +475,7 @@ int cfg::Value::objectSearch(const SearchRule *rules,
 		}
 		// check if it was the first time that the rule was used and if the rule must be used
 		if (usedRuleCounts[curRuleIndex] == 1 &&
-				rules[curRuleIndex].mRule == SearchRule::RULE_MUST_EXIST) {
+				rules[curRuleIndex].mRule == SelectRule::RULE_MUST_EXIST) {
 			++currentMustExistCount;
 		}
 		if (usedRuleCounts[curRuleIndex] > 1) {
@@ -486,16 +486,16 @@ int cfg::Value::objectSearch(const SearchRule *rules,
 			return -4;
 		}
 
-		const SearchRule& rule = rules[curRuleIndex];
+		const SelectRule& rule = rules[curRuleIndex];
 		static unsigned int lookup[] = {
-			SearchRule::ALLOW_NONE,  // for Value::TYPE_NONE  = 0
-			SearchRule::ALLOW_NULL,  // for Value::TYPE_NULL  = 1
-			SearchRule::ALLOW_BOOL,  // for Value::TYPE_BOOL  = 2
-			SearchRule::ALLOW_FLOAT, // for Value::TYPE_FLOAT = 3
-			SearchRule::ALLOW_INT,   // for Value::TYPE_INT   = 4
-			SearchRule::ALLOW_TEXT,  // for Value::TYPE_TEXT  = 5
+			SelectRule::ALLOW_NONE,  // for Value::TYPE_NONE  = 0
+			SelectRule::ALLOW_NULL,  // for Value::TYPE_NULL  = 1
+			SelectRule::ALLOW_BOOL,  // for Value::TYPE_BOOL  = 2
+			SelectRule::ALLOW_FLOAT, // for Value::TYPE_FLOAT = 3
+			SelectRule::ALLOW_INT,   // for Value::TYPE_INT   = 4
+			SelectRule::ALLOW_TEXT,  // for Value::TYPE_TEXT  = 5
 			0, // ALLOW_COMMENT not exist // for Value::TYPE_COMMENT = 6
-			SearchRule::ALLOW_OBJECT, // for Value::TYPE_OBJECT
+			SelectRule::ALLOW_OBJECT, // for Value::TYPE_OBJECT
 		};
 		if (!(rule.mAllowedTypes & lookup[vp.mValue.mType])) {
 			if (allowDuplicatedRuleNamesWithDiffTypes) {
@@ -505,7 +505,7 @@ int cfg::Value::objectSearch(const SearchRule *rules,
 				// check if it was the first time that the rule was used and if the rule must be used
 				// then the "current must exist count" must also be reverted
 				if (usedRuleCounts[curRuleIndex] == 1 &&
-						rules[curRuleIndex].mRule == SearchRule::RULE_MUST_EXIST) {
+						rules[curRuleIndex].mRule == SelectRule::RULE_MUST_EXIST) {
 					--currentMustExistCount;
 				}
 				--usedRuleCounts[curRuleIndex];
@@ -520,37 +520,37 @@ int cfg::Value::objectSearch(const SearchRule *rules,
 			return -5;
 		}
 		switch (rule.mType) {
-			case SearchRule::TYPE_UNKNOWN:
+			case SelectRule::TYPE_UNKNOWN:
 				return -1; // unknown is not allowed
-			case SearchRule::TYPE_NULL:
+			case SelectRule::TYPE_NULL:
 				*rule.mStorePtr.mNull = true;
 				break;
-			case SearchRule::TYPE_BOOL:
+			case SelectRule::TYPE_BOOL:
 				*rule.mStorePtr.mBool = vp.mValue.mBool;
 				break;
-			case SearchRule::TYPE_FLOAT:
+			case SelectRule::TYPE_FLOAT:
 				*rule.mStorePtr.mFloat = vp.mValue.mFloatingPoint;
 				break;
-			case SearchRule::TYPE_DOUBLE:
+			case SelectRule::TYPE_DOUBLE:
 				*rule.mStorePtr.mDouble = vp.mValue.mFloatingPoint;
 				break;
-			case SearchRule::TYPE_INT:
+			case SelectRule::TYPE_INT:
 				*rule.mStorePtr.mInt = vp.mValue.mInteger;
 				break;
-			case SearchRule::TYPE_UINT:
+			case SelectRule::TYPE_UINT:
 				*rule.mStorePtr.mUInt = (vp.mValue.mInteger >= 0) ?
 						vp.mValue.mInteger : 0;
 				break;
-			case SearchRule::TYPE_STRING:
+			case SelectRule::TYPE_STRING:
 				*rule.mStorePtr.mStr = vp.mValue.mText;
 				break;
-			case SearchRule::TYPE_OBJECT:
+			case SelectRule::TYPE_OBJECT:
 				*rule.mStorePtr.mObject = &vp.mValue.mObject;
 				break;
-			case SearchRule::TYPE_VALUE:
+			case SelectRule::TYPE_VALUE:
 				*rule.mStorePtr.mValue = &vp.mValue;
 				break;
-			case SearchRule::TYPE_VALUE_PAIR:
+			case SelectRule::TYPE_VALUE_PAIR:
 				*rule.mStorePtr.mValuePair = &vp;
 				break;
 		}
@@ -561,7 +561,7 @@ int cfg::Value::objectSearch(const SearchRule *rules,
 	// now check if the rules are complied
 #if 1
 	for (std::size_t ri = 0; ri < rulesSize; ri++) {
-		if (rules[ri].mRule == SearchRule::RULE_MUST_EXIST && !usedRuleCounts[ri]) {
+		if (rules[ri].mRule == SelectRule::RULE_MUST_EXIST && !usedRuleCounts[ri]) {
 			return -6;
 		}
 	}

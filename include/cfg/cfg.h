@@ -1,5 +1,5 @@
-#ifndef TML_CFG_H
-#define TML_CFG_H
+#ifndef CFG_CFG_H
+#define CFG_CFG_H
 
 #include <string>
 #include <fstream>
@@ -13,7 +13,7 @@
 namespace cfg
 {
 	class NameValuePair;
-	class SearchRule;
+	class SelectRule;
 
 	class Value
 	{
@@ -143,6 +143,9 @@ namespace cfg
 		std::vector<int> objectGetIntegers(const std::string &attrName) const;
 		int objectGetAttrIndex(const std::string &attrName) const;
 		/**
+		 * objectGet() is to check and get various name value pairs of the object
+		 * by a rule-based schema.
+		 *
 		 * @param rules The size limit is 64 without the termination rule
 		 *              (64 rules + 1 termination rule)
 		 * @param allowRandomSequence
@@ -157,7 +160,7 @@ namespace cfg
 		 * @param startIndex
 		 * @return Return the store count.
 		 */
-		int objectSearch(const SearchRule *rules, bool allowRandomSequence,
+		int objectGet(const SelectRule *rules, bool allowRandomSequence,
 				bool allowUnusedValuePairs, bool allowEarlyReturn,
 				bool allowDuplicatedNames,
 				bool allowDuplicatedRuleNamesWithDiffTypes,
@@ -203,7 +206,7 @@ namespace cfg
 					mValue.isObject() && mValue.mObject.empty(); }
 	};
 
-	class SearchRule
+	class SelectRule
 	{
 	public:
 		const std::string mName;
@@ -262,20 +265,20 @@ namespace cfg
 		// stores the count how often the rule was used
 		unsigned int* mUsedCount;
 
-		SearchRule(const char* name) // should be always "" for EOF of rule array
+		SelectRule(const char* name) // should be always "" for EOF of rule array
 				:mName(name),
 				mType(TYPE_UNKNOWN), mRule(RULE_OPTIONAL),
 				mAllowedTypes(0),
 				mUsedCount(nullptr) {}
 
-		SearchRule(const char* name, bool* boolPtr, ERule rule,
+		SelectRule(const char* name, bool* boolPtr, ERule rule,
 				unsigned int typeFlags = ALLOW_BOOL, unsigned int* usedCount = nullptr)
 				:mName(name),
 				mType(TYPE_BOOL), mRule(rule),
 				mAllowedTypes(typeFlags),
 				mUsedCount(usedCount)
 				{ mStorePtr.mBool = boolPtr; }
-		SearchRule(const std::string& name, bool* boolPtr, ERule rule,
+		SelectRule(const std::string& name, bool* boolPtr, ERule rule,
 				unsigned int typeFlags = ALLOW_BOOL, unsigned int* usedCount = nullptr)
 				:mName(name),
 				mType(TYPE_BOOL), mRule(rule),
@@ -283,14 +286,14 @@ namespace cfg
 				mUsedCount(usedCount)
 				{ mStorePtr.mBool = boolPtr; }
 
-		SearchRule(const char* name, float* floatPtr, ERule rule,
+		SelectRule(const char* name, float* floatPtr, ERule rule,
 				unsigned int typeFlags = ALLOW_NUMBER, unsigned int* usedCount = nullptr)
 				:mName(name),
 				mType(TYPE_FLOAT), mRule(rule),
 				mAllowedTypes(typeFlags),
 				mUsedCount(usedCount)
 				{ mStorePtr.mFloat = floatPtr; }
-		SearchRule(const std::string& name, float* floatPtr, ERule rule,
+		SelectRule(const std::string& name, float* floatPtr, ERule rule,
 				unsigned int typeFlags = ALLOW_NUMBER, unsigned int* usedCount = nullptr)
 				:mName(name),
 				mType(TYPE_FLOAT), mRule(rule),
@@ -298,14 +301,14 @@ namespace cfg
 				mUsedCount(usedCount)
 				{ mStorePtr.mFloat = floatPtr; }
 
-		SearchRule(const char* name, double* doublePtr, ERule rule,
+		SelectRule(const char* name, double* doublePtr, ERule rule,
 				unsigned int typeFlags = ALLOW_NUMBER, unsigned int* usedCount = nullptr)
 				:mName(name),
 				mType(TYPE_DOUBLE), mRule(rule),
 				mAllowedTypes(typeFlags),
 				mUsedCount(usedCount)
 				{ mStorePtr.mDouble = doublePtr; }
-		SearchRule(const std::string& name, double* doublePtr, ERule rule,
+		SelectRule(const std::string& name, double* doublePtr, ERule rule,
 				unsigned int typeFlags = ALLOW_NUMBER, unsigned int* usedCount = nullptr)
 				:mName(name),
 				mType(TYPE_DOUBLE), mRule(rule),
@@ -313,14 +316,14 @@ namespace cfg
 				mUsedCount(usedCount)
 				{ mStorePtr.mDouble = doublePtr; }
 
-		SearchRule(const char* name, int* intPtr, ERule rule,
+		SelectRule(const char* name, int* intPtr, ERule rule,
 				unsigned int typeFlags = ALLOW_INT, unsigned int* usedCount = nullptr)
 				:mName(name),
 				mType(TYPE_INT), mRule(rule),
 				mAllowedTypes(typeFlags),
 				mUsedCount(usedCount)
 				{ mStorePtr.mInt = intPtr; }
-		SearchRule(const std::string& name, int* intPtr, ERule rule,
+		SelectRule(const std::string& name, int* intPtr, ERule rule,
 				unsigned int typeFlags = ALLOW_INT, unsigned int* usedCount = nullptr)
 				:mName(name),
 				mType(TYPE_INT), mRule(rule),
@@ -328,14 +331,14 @@ namespace cfg
 				mUsedCount(usedCount)
 				{ mStorePtr.mInt = intPtr; }
 
-		SearchRule(const char* name, unsigned int* uintPtr, ERule rule,
+		SelectRule(const char* name, unsigned int* uintPtr, ERule rule,
 				unsigned int typeFlags = ALLOW_INT, unsigned int* usedCount = nullptr)
 				:mName(name),
 				mType(TYPE_UINT), mRule(rule),
 				mAllowedTypes(typeFlags),
 				mUsedCount(usedCount)
 				{ mStorePtr.mUInt = uintPtr; }
-		SearchRule(const std::string& name, unsigned int* uintPtr, ERule rule,
+		SelectRule(const std::string& name, unsigned int* uintPtr, ERule rule,
 				unsigned int typeFlags = ALLOW_INT, unsigned int* usedCount = nullptr)
 				:mName(name),
 				mType(TYPE_UINT), mRule(rule),
@@ -343,14 +346,14 @@ namespace cfg
 				mUsedCount(usedCount)
 				{ mStorePtr.mUInt = uintPtr; }
 
-		SearchRule(const char* name, std::string* strPtr, ERule rule,
+		SelectRule(const char* name, std::string* strPtr, ERule rule,
 				unsigned int typeFlags = ALLOW_TEXT, unsigned int* usedCount = nullptr)
 				:mName(name),
 				mType(TYPE_STRING), mRule(rule),
 				mAllowedTypes(typeFlags),
 				mUsedCount(usedCount)
 				{ mStorePtr.mStr = strPtr; }
-		SearchRule(const std::string& name, std::string* strPtr, ERule rule,
+		SelectRule(const std::string& name, std::string* strPtr, ERule rule,
 				unsigned int typeFlags = ALLOW_TEXT, unsigned int* usedCount = nullptr)
 				:mName(name),
 				mType(TYPE_STRING), mRule(rule),
@@ -358,14 +361,14 @@ namespace cfg
 				mUsedCount(usedCount)
 				{ mStorePtr.mStr = strPtr; }
 
-		SearchRule(const char* name, const std::vector<NameValuePair>** arrayPtr, ERule rule,
+		SelectRule(const char* name, const std::vector<NameValuePair>** arrayPtr, ERule rule,
 				unsigned int typeFlags = ALLOW_OBJECT, unsigned int* usedCount = nullptr)
 				:mName(name),
 				mType(TYPE_OBJECT), mRule(rule),
 				mAllowedTypes(typeFlags),
 				mUsedCount(usedCount)
 				{ mStorePtr.mObject = arrayPtr; }
-		SearchRule(const std::string& name, const std::vector<NameValuePair>** arrayPtr, ERule rule,
+		SelectRule(const std::string& name, const std::vector<NameValuePair>** arrayPtr, ERule rule,
 				unsigned int typeFlags = ALLOW_OBJECT, unsigned int* usedCount = nullptr)
 				:mName(name),
 				mType(TYPE_OBJECT), mRule(rule),
@@ -373,14 +376,14 @@ namespace cfg
 				mUsedCount(usedCount)
 				{ mStorePtr.mObject = arrayPtr; }
 
-		SearchRule(const char* name, const Value** arrayPtr, ERule rule,
+		SelectRule(const char* name, const Value** arrayPtr, ERule rule,
 				unsigned int typeFlags = ALLOW_OBJECT, unsigned int* usedCount = nullptr)
 				:mName(name),
 				mType(TYPE_VALUE), mRule(rule),
 				mAllowedTypes(typeFlags),
 				mUsedCount(usedCount)
 		{ mStorePtr.mValue = arrayPtr; }
-		SearchRule(const std::string& name, const Value** arrayPtr, ERule rule,
+		SelectRule(const std::string& name, const Value** arrayPtr, ERule rule,
 				unsigned int typeFlags = ALLOW_OBJECT, unsigned int* usedCount = nullptr)
 				:mName(name),
 				mType(TYPE_VALUE), mRule(rule),
@@ -388,14 +391,14 @@ namespace cfg
 				mUsedCount(usedCount)
 		{ mStorePtr.mValue = arrayPtr; }
 
-		SearchRule(const char* name, const NameValuePair** valuePairPtr, ERule rule,
+		SelectRule(const char* name, const NameValuePair** valuePairPtr, ERule rule,
 					unsigned int typeFlags = ALLOW_OBJECT, unsigned int* usedCount = nullptr)
 				:mName(name),
 				 mType(TYPE_VALUE_PAIR), mRule(rule),
 				 mAllowedTypes(typeFlags),
 				 mUsedCount(usedCount)
 		{ mStorePtr.mValuePair = valuePairPtr; }
-		SearchRule(const std::string& name, const NameValuePair** valuePairPtr, ERule rule,
+		SelectRule(const std::string& name, const NameValuePair** valuePairPtr, ERule rule,
 					unsigned int typeFlags = ALLOW_OBJECT, unsigned int* usedCount = nullptr)
 				:mName(name),
 				 mType(TYPE_VALUE_PAIR), mRule(rule),
