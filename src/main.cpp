@@ -16,15 +16,15 @@ namespace
 				"------------------\n" <<
 				"  help                     ... print this help\n" <<
 				"  print <filename>         ... print the tml file\n" <<
+				"  print-values <filename>  ... print the tml file without empty lines and comments\n" <<
 				std::endl;
 	}
 
-	int printTml(const char* filename)
+	int printTml(const char* filename, bool inclEmptyLines, bool inclComments)
 	{
 		cfg::TmlParser p(filename);
 		cfg::NameValuePair cvp;
-		if (!p.getAsTree(cvp, true /* inclEmptyLines */,
-				true /* inclComments */)) {
+		if (!p.getAsTree(cvp, inclEmptyLines, inclComments)) {
 			std::cerr << "parse " << filename << " failed" << std::endl;
 			std::cerr << "error: " << p.getExtendedErrorMsg() << std::endl;
 			return 1;
@@ -57,7 +57,15 @@ int main(int argc, char* argv[])
 			printHelp(argv[0]);
 			return 1;
 		}
-		return printTml(argv[2]);
+		return printTml(argv[2], true, true);
+	}
+	if (command == "print-values") {
+		if (argc != 3) {
+			std::cerr << "print command need exactly one argument/filename" << std::endl;
+			printHelp(argv[0]);
+			return 1;
+		}
+		return printTml(argv[2], false, false);
 	}
 	std::cerr << "command '" << command << "' is not supported" << std::endl;
 	printHelp(argv[0]);
