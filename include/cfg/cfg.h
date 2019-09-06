@@ -31,6 +31,9 @@ namespace cfg
 			TYPE_OBJECT,
 		};
 
+		// use a shared_ptr instead of direct a std::string to only have one string instance per file
+		// independent if std::string implemetation has ref counting or not.
+		std::shared_ptr<const std::string> mFilename;
 		// -1 for no line number
 		int mLineNumber;
 		// -1 for no offset. offset is the horizontal offset at the text line from file
@@ -78,8 +81,10 @@ namespace cfg
 		// If only a offset is set then ::<offset> is returned
 		// If both line number and offset are -1 then a empty string is returned.
 		std::string getFilePosition() const;
+		std::string getFilenameAndPosition() const;
 		// error happend at
 		void printFilePositionAsError() const;
+		// clear/reset everything excepted the pointer to mFilename
 		void clear();
 		void setNull();
 		void setBool(bool value);
@@ -91,21 +96,20 @@ namespace cfg
 		void setObject();
 		bool equalText(const std::string& text) const;
 
-		bool isEmpty() const { return mType == Value::TYPE_NONE; }
-		bool isComment() const { return mType == Value::TYPE_COMMENT; }
-		bool isNull() const { return mType == Value::TYPE_NULL; }
-		bool isBool() const { return mType == Value::TYPE_BOOL; }
-		bool isFloat() const { return mType == Value::TYPE_FLOAT; }
-		bool isInteger() const { return mType == Value::TYPE_INT; }
+		bool isEmpty() const { return mType == TYPE_NONE; }
+		bool isComment() const { return mType == TYPE_COMMENT; }
+		bool isNull() const { return mType == TYPE_NULL; }
+		bool isBool() const { return mType == TYPE_BOOL; }
+		bool isFloat() const { return mType == TYPE_FLOAT; }
+		bool isInteger() const { return mType == TYPE_INT; }
 		bool isNumber() const { return isInteger() || isFloat(); }
-		bool isText() const { return mType == Value::TYPE_TEXT; }
+		bool isText() const { return mType == TYPE_TEXT; }
+		bool isArray() const { return mType == TYPE_ARRAY; }
 		bool isNoObject() const { return mType == TYPE_NONE || mType == TYPE_NULL ||
 				mType == TYPE_BOOL || mType == TYPE_FLOAT ||
 				mType == TYPE_INT || mType == TYPE_TEXT ||
-				mType == TYPE_COMMENT; }
-		bool isObject() const {
-			return mType == TYPE_OBJECT;
-		}
+				mType == TYPE_COMMENT || mType == TYPE_ARRAY; }
+		bool isObject() const { return mType == TYPE_OBJECT; }
 
 		/**
 		 * @param attrName attribute name of a value pair inside a object

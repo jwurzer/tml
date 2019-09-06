@@ -250,6 +250,7 @@ int cfg::TmlParser::getNextSmlEntry(std::string& utf8Line, NameValuePair& entry,
 		}
 		if (wordCountPerValue >= 2) {
 			array->mArray.push_back(Value());
+			array->mArray.back().mFilename = array->mFilename;
 			value = &array->mArray.back();
 		}
 
@@ -324,8 +325,11 @@ bool cfg::TmlParser::getAsTree(Value &root,
 		root.clear();
 		return false;
 	}
+	std::shared_ptr<const std::string> filenamePtr = std::make_shared<const std::string>(mFilename);
 
 	NameValuePair cfgPair;
+	cfgPair.mName.mFilename = filenamePtr;
+	cfgPair.mValue.mFilename = filenamePtr;
 	std::vector<Value*> stack;
 	stack.reserve(10);
 	root.setObject();
@@ -338,10 +342,7 @@ bool cfg::TmlParser::getAsTree(Value &root,
 
 	while ((deep = getNextSmlEntry(cfgPair)) >= 0) {
 
-		if (cfgPair.isEmptyOrComment()) {
-			++currentContiguousEmptyOrCommentCount;
-		}
-		else {
+		if (!cfgPair.isEmptyOrComment()) {
 			if (deep > prevDeep) {
 #if 1
 				// should not be possible
@@ -431,6 +432,11 @@ bool cfg::TmlParser::getAsTree(Value &root,
 		if (!cfgPair.isEmptyOrComment() ||
 				(inclEmptyLines && cfgPair.isEmpty()) ||
 				(inclComments && cfgPair.isComment())) {
+
+			if (cfgPair.isEmptyOrComment()) {
+				++currentContiguousEmptyOrCommentCount;
+			}
+
 			stack.back()->mObject.push_back(cfgPair);
 		}
 	}
