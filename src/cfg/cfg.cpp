@@ -71,6 +71,14 @@ std::string cfg::Value::getFilePosition() const
 	return str;
 }
 
+std::string cfg::Value::getFilenameAndPosition() const
+{
+	if (mFilename) {
+		return *mFilename + getFilePosition();
+	}
+	return getFilePosition();
+}
+
 void cfg::Value::printFilePositionAsError() const
 {
 	//LOGE("Error happend at %s\n", getFilePosition().c_str());
