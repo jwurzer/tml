@@ -92,8 +92,6 @@ namespace cfg
 		// If both line number and offset are -1 then a empty string is returned.
 		std::string getFilePosition() const;
 		std::string getFilenameAndPosition() const;
-		// error happend at
-		void printFilePositionAsError() const;
 		// clear/reset everything excepted the pointer to mFilename
 		void clear();
 		void setNull();

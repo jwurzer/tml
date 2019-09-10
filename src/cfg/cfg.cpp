@@ -1,5 +1,4 @@
 #include <cfg/cfg.h>
-//#include <tml/system/log.h>
 #include <cmath>
 #include <string.h>
 
@@ -77,11 +76,6 @@ std::string cfg::Value::getFilenameAndPosition() const
 		return *mFilename + getFilePosition();
 	}
 	return getFilePosition();
-}
-
-void cfg::Value::printFilePositionAsError() const
-{
-	//LOGE("Error happend at %s\n", getFilePosition().c_str());
 }
 
 void cfg::Value::clear()
@@ -438,7 +432,6 @@ int cfg::Value::objectGet(const SelectRule *rules,
 	std::size_t usedRuleCounts[64];
 	memset(usedRuleCounts, 0, sizeof(usedRuleCounts));
 	if (rulesSize > 64) {
-		//LOGE("Too many config rules (%zu > 64)\n", rulesSize);
 		if (errMsg) {
 			*errMsg = "Too many config rules (" + std::to_string(rulesSize) + " > 64)";
 		}
