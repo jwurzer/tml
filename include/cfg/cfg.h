@@ -1,6 +1,8 @@
 #ifndef CFG_CFG_H
 #define CFG_CFG_H
 
+#include <cfg/export.h>
+
 #include <string>
 #include <fstream>
 #include <memory>
@@ -15,7 +17,15 @@ namespace cfg
 	class NameValuePair;
 	class SelectRule;
 
-	class Value
+	enum class EReset
+	{
+		RESET_NOTHING = 0,
+		RESET_POINTERS_TO_NULL,
+		/* reset pointers to null and all other values to zero or false. */
+				RESET_EVERYTHING_TO_DEFAULTS,
+	};
+
+	class CFG_API Value
 	{
 	public:
 		enum EValueType
@@ -165,7 +175,8 @@ namespace cfg
 				bool allowDuplicatedNames,
 				bool allowDuplicatedRuleNamesWithDiffTypes,
 				std::size_t startIndex,
-				std::size_t *outNextIndex) const;
+				std::size_t *outNextIndex,
+				EReset reset = EReset::RESET_POINTERS_TO_NULL) const;
 	};
 
 	/**
@@ -173,7 +184,7 @@ namespace cfg
 	 * a string then the name value pair is compatible with a JSON object which
 	 * must have a string and a value.
 	 */
-	class NameValuePair
+	class CFG_API NameValuePair
 	{
 	public:
 		Value mName;
@@ -206,7 +217,7 @@ namespace cfg
 					mValue.isObject() && mValue.mObject.empty(); }
 	};
 
-	class SelectRule
+	class CFG_API SelectRule
 	{
 	public:
 		const std::string mName;

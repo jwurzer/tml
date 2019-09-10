@@ -358,36 +358,51 @@ int cfg::Value::objectGet(const SelectRule *rules,
 		bool allowUnusedValuePairs, bool allowEarlyReturn,
 		bool allowDuplicatedNames,
 		bool allowDuplicatedRuleNamesWithDiffTypes,
-		std::size_t startIndex, std::size_t *outNextIndex) const
+		std::size_t startIndex, std::size_t *outNextIndex,
+		EReset reset) const
 {
 	std::size_t rulesSize = 0;
 	unsigned int finalMustExistCount = 0;
 	unsigned int currentMustExistCount = 0;
 	while (rules[rulesSize].mType != SelectRule::TYPE_UNKNOWN) {
-		if (rules[rulesSize].mStorePtr.mPtr) {
+		if (reset != EReset::RESET_NOTHING && rules[rulesSize].mStorePtr.mPtr) {
 			switch (rules[rulesSize].mType) {
 				case SelectRule::TYPE_UNKNOWN:
 					break;
 				case SelectRule::TYPE_NULL:
-					*rules[rulesSize].mStorePtr.mNull = false;
+					if (reset == EReset::RESET_EVERYTHING_TO_DEFAULTS) {
+						*rules[rulesSize].mStorePtr.mNull = false;
+					}
 					break;
 				case SelectRule::TYPE_BOOL:
-					*rules[rulesSize].mStorePtr.mBool = false;
+					if (reset == EReset::RESET_EVERYTHING_TO_DEFAULTS) {
+						*rules[rulesSize].mStorePtr.mBool = false;
+					}
 					break;
 				case SelectRule::TYPE_FLOAT:
-					*rules[rulesSize].mStorePtr.mFloat = 0.0f;
+					if (reset == EReset::RESET_EVERYTHING_TO_DEFAULTS) {
+						*rules[rulesSize].mStorePtr.mFloat = 0.0f;
+					}
 					break;
 				case SelectRule::TYPE_DOUBLE:
-					*rules[rulesSize].mStorePtr.mDouble = 0.0;
+					if (reset == EReset::RESET_EVERYTHING_TO_DEFAULTS) {
+						*rules[rulesSize].mStorePtr.mDouble = 0.0;
+					}
 					break;
 				case SelectRule::TYPE_INT:
-					*rules[rulesSize].mStorePtr.mInt = 0;
+					if (reset == EReset::RESET_EVERYTHING_TO_DEFAULTS) {
+						*rules[rulesSize].mStorePtr.mInt = 0;
+					}
 					break;
 				case SelectRule::TYPE_UINT:
-					*rules[rulesSize].mStorePtr.mUInt = 0;
+					if (reset == EReset::RESET_EVERYTHING_TO_DEFAULTS) {
+						*rules[rulesSize].mStorePtr.mUInt = 0;
+					}
 					break;
 				case SelectRule::TYPE_STRING:
-					rules[rulesSize].mStorePtr.mStr->clear();
+					if (reset == EReset::RESET_EVERYTHING_TO_DEFAULTS) {
+						rules[rulesSize].mStorePtr.mStr->clear();
+					}
 					break;
 				case SelectRule::TYPE_OBJECT:
 					*rules[rulesSize].mStorePtr.mObject = nullptr;

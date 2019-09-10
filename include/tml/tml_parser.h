@@ -1,5 +1,7 @@
-#ifndef TML_TML_PARSER_H
-#define TML_TML_PARSER_H
+#ifndef CFG_TML_PARSER_H
+#define CFG_TML_PARSER_H
+
+#include <cfg/export.h>
 
 #include <fstream>
 #include <string>
@@ -10,10 +12,10 @@ namespace cfg
 	class Value;
 
 	/**
-	 * sml - smart markup language
+	 * TML - Tiny Markup Language
 	 * See more infos at the end of this file.
 	 */
-	class TmlParser
+	class CFG_API TmlParser
 	{
 	public:
 		TmlParser();
