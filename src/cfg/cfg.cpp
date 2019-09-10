@@ -359,11 +359,15 @@ int cfg::Value::objectGet(const SelectRule *rules,
 		bool allowDuplicatedNames,
 		bool allowDuplicatedRuleNamesWithDiffTypes,
 		std::size_t startIndex, std::size_t *outNextIndex,
-		EReset reset) const
+		EReset reset,
+		std::string* errMsg) const
 {
 	std::size_t rulesSize = 0;
 	unsigned int finalMustExistCount = 0;
 	unsigned int currentMustExistCount = 0;
+	if (errMsg) {
+		errMsg->clear();
+	}
 	while (rules[rulesSize].mType != SelectRule::TYPE_UNKNOWN) {
 		if (reset != EReset::RESET_NOTHING && rules[rulesSize].mStorePtr.mPtr) {
 			switch (rules[rulesSize].mType) {
@@ -404,6 +408,9 @@ int cfg::Value::objectGet(const SelectRule *rules,
 						rules[rulesSize].mStorePtr.mStr->clear();
 					}
 					break;
+				case SelectRule::TYPE_ARRAY:
+					*rules[rulesSize].mStorePtr.mArray = nullptr;
+					break;
 				case SelectRule::TYPE_OBJECT:
 					*rules[rulesSize].mStorePtr.mObject = nullptr;
 					break;
@@ -432,6 +439,9 @@ int cfg::Value::objectGet(const SelectRule *rules,
 	memset(usedRuleCounts, 0, sizeof(usedRuleCounts));
 	if (rulesSize > 64) {
 		//LOGE("Too many config rules (%zu > 64)\n", rulesSize);
+		if (errMsg) {
+			*errMsg = "Too many config rules (" + std::to_string(rulesSize) + " > 64)";
+		}
 		return -1;
 	}
 
@@ -471,6 +481,9 @@ int cfg::Value::objectGet(const SelectRule *rules,
 							vp.mName.mText : "";
 					if (getRuleIndex(vpAttrName, curRuleIndex,
 							rules, rulesSize, allowRandomSequence && !prevTypeWasWrong) >= 0) {
+						if (errMsg) {
+							*errMsg = "rule for attr name '" + vpAttrName + "' is not allowed here";
+						}
 						return -2;
 					}
 					++curRuleIndex; // no problem if out of range because getRuleIndex() check this
@@ -480,7 +493,9 @@ int cfg::Value::objectGet(const SelectRule *rules,
 				}
 				return storeCount;
 			}
-			//LOGI("no rule found for attr name '%s'\n", vpAttrName.c_str());
+			if (errMsg) {
+				*errMsg = "no rule found for attr name '" + vpAttrName + "'";
+			}
 			return -3;
 		}
 		curRuleIndex = ri;
@@ -498,19 +513,23 @@ int cfg::Value::objectGet(const SelectRule *rules,
 				curRuleIndex++; // no problem if out of range because getRuleIndex() check this
 				continue; // ignore duplicates --> jump to next
 			}
+			if (errMsg) {
+				*errMsg = "found duplicated rule for attr name '" + vpAttrName + "'";
+			}
 			return -4;
 		}
 
 		const SelectRule& rule = rules[curRuleIndex];
 		static unsigned int lookup[] = {
-			SelectRule::ALLOW_NONE,  // for Value::TYPE_NONE  = 0
-			SelectRule::ALLOW_NULL,  // for Value::TYPE_NULL  = 1
-			SelectRule::ALLOW_BOOL,  // for Value::TYPE_BOOL  = 2
-			SelectRule::ALLOW_FLOAT, // for Value::TYPE_FLOAT = 3
-			SelectRule::ALLOW_INT,   // for Value::TYPE_INT   = 4
-			SelectRule::ALLOW_TEXT,  // for Value::TYPE_TEXT  = 5
+			SelectRule::ALLOW_NONE,   // for Value::TYPE_NONE   = 0
+			SelectRule::ALLOW_NULL,   // for Value::TYPE_NULL   = 1
+			SelectRule::ALLOW_BOOL,   // for Value::TYPE_BOOL   = 2
+			SelectRule::ALLOW_FLOAT,  // for Value::TYPE_FLOAT  = 3
+			SelectRule::ALLOW_INT,    // for Value::TYPE_INT    = 4
+			SelectRule::ALLOW_TEXT,   // for Value::TYPE_TEXT   = 5
 			0, // ALLOW_COMMENT not exist // for Value::TYPE_COMMENT = 6
-			SelectRule::ALLOW_OBJECT, // for Value::TYPE_OBJECT
+			SelectRule::ALLOW_ARRAY,  // for Value::TYPE_ARRAY  = 7
+			SelectRule::ALLOW_OBJECT, // for Value::TYPE_OBJECT = 8
 		};
 		if (!(rule.mAllowedTypes & lookup[vp.mValue.mType])) {
 			if (allowDuplicatedRuleNamesWithDiffTypes) {
@@ -530,8 +549,12 @@ int cfg::Value::objectGet(const SelectRule *rules,
 				curRuleIndex++; // no problem if out of range because getRuleIndex() check this
 				continue;
 			}
-			//LOGE("Type is not allowed. allowed %u, lookup %u, type %u\n",
-			//		rule.mAllowedTypes, lookup[vp.mValue.mType], vp.mValue.mType);
+			if (errMsg) {
+				*errMsg = "Type is not allowed for rule '" + vpAttrName +
+						"'. allowed " + std::to_string(rule.mAllowedTypes) +
+						", lookup " + std::to_string(lookup[vp.mValue.mType]) +
+						", type " + std::to_string(vp.mValue.mType);
+			}
 			return -5;
 		}
 		switch (rule.mType) {
@@ -559,6 +582,9 @@ int cfg::Value::objectGet(const SelectRule *rules,
 			case SelectRule::TYPE_STRING:
 				*rule.mStorePtr.mStr = vp.mValue.mText;
 				break;
+			case SelectRule::TYPE_ARRAY:
+				*rule.mStorePtr.mArray = &vp.mValue.mArray;
+				break;
 			case SelectRule::TYPE_OBJECT:
 				*rule.mStorePtr.mObject = &vp.mValue.mObject;
 				break;
@@ -577,12 +603,21 @@ int cfg::Value::objectGet(const SelectRule *rules,
 #if 1
 	for (std::size_t ri = 0; ri < rulesSize; ri++) {
 		if (rules[ri].mRule == SelectRule::RULE_MUST_EXIST && !usedRuleCounts[ri]) {
+			if (errMsg) {
+				*errMsg = "rule '" + rules[ri].mName + "' with index " +
+						std::to_string(ri) + " is not used (but is RULE_MUST_EXIST)";
+			}
 			return -6;
 		}
 	}
 #endif
 	// this version should be enougth. Loop above is not necessary.
 	if (currentMustExistCount < finalMustExistCount) {
+		if (errMsg) {
+			*errMsg = "wrong used count for 'must exist' rules. " +
+					std::to_string(currentMustExistCount) + " < " +
+					std::to_string(finalMustExistCount);
+		}
 		return -7;
 	}
 	if (outNextIndex) {

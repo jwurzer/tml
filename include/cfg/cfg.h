@@ -176,7 +176,8 @@ namespace cfg
 				bool allowDuplicatedRuleNamesWithDiffTypes,
 				std::size_t startIndex,
 				std::size_t *outNextIndex,
-				EReset reset = EReset::RESET_POINTERS_TO_NULL) const;
+				EReset reset = EReset::RESET_POINTERS_TO_NULL,
+				std::string* errMsg = nullptr) const;
 	};
 
 	/**
@@ -233,6 +234,7 @@ namespace cfg
 			TYPE_INT,
 			TYPE_UINT,
 			TYPE_STRING,
+			TYPE_ARRAY,
 			TYPE_OBJECT,
 			TYPE_VALUE,
 			TYPE_VALUE_PAIR,
@@ -247,6 +249,7 @@ namespace cfg
 			int* mInt;
 			unsigned int* mUInt;
 			std::string* mStr;
+			const std::vector<Value>** mArray;
 			const std::vector<NameValuePair>** mObject;
 			const Value** mValue;
 			const NameValuePair** mValuePair;
@@ -260,16 +263,18 @@ namespace cfg
 
 		enum EAllowedTypes
 		{
-			ALLOW_NONE   =  1,
-			ALLOW_NULL   =  2,
-			ALLOW_BOOL   =  4,
-			ALLOW_FLOAT  =  8,
-			ALLOW_INT    = 16,
-			ALLOW_TEXT   = 32,
-			ALLOW_OBJECT = 64,
+			ALLOW_NONE   =   1,
+			ALLOW_NULL   =   2,
+			ALLOW_BOOL   =   4,
+			ALLOW_FLOAT  =   8,
+			ALLOW_INT    =  16,
+			ALLOW_TEXT   =  32,
+			ALLOW_ARRAY  =  64,
+			ALLOW_OBJECT = 128,
 
 			ALLOW_NUMBER = (ALLOW_FLOAT | ALLOW_INT),
-			ALLOW_ALL    = (ALLOW_NONE | ALLOW_NULL | ALLOW_BOOL | ALLOW_FLOAT | ALLOW_INT | ALLOW_TEXT | ALLOW_OBJECT),
+			ALLOW_ALL    = (ALLOW_NONE | ALLOW_NULL | ALLOW_BOOL | ALLOW_FLOAT |
+					ALLOW_INT | ALLOW_TEXT | ALLOW_ARRAY | ALLOW_OBJECT),
 		};
 		unsigned int mAllowedTypes; // as uint instead of AllowedTypes because its used as flags
 
@@ -371,6 +376,21 @@ namespace cfg
 				mAllowedTypes(typeFlags),
 				mUsedCount(usedCount)
 				{ mStorePtr.mStr = strPtr; }
+
+		SelectRule(const char* name, const std::vector<Value>** arrayPtr, ERule rule,
+				unsigned int typeFlags = ALLOW_ARRAY, unsigned int* usedCount = nullptr)
+				:mName(name),
+				mType(TYPE_ARRAY), mRule(rule),
+				mAllowedTypes(typeFlags),
+				mUsedCount(usedCount)
+		{ mStorePtr.mArray = arrayPtr; }
+		SelectRule(const std::string& name, const std::vector<Value>** arrayPtr, ERule rule,
+				unsigned int typeFlags = ALLOW_ARRAY, unsigned int* usedCount = nullptr)
+				:mName(name),
+				mType(TYPE_ARRAY), mRule(rule),
+				mAllowedTypes(typeFlags),
+				mUsedCount(usedCount)
+		{ mStorePtr.mArray = arrayPtr; }
 
 		SelectRule(const char* name, const std::vector<NameValuePair>** arrayPtr, ERule rule,
 				unsigned int typeFlags = ALLOW_OBJECT, unsigned int* usedCount = nullptr)
