@@ -22,7 +22,7 @@ namespace cfg
 		RESET_NOTHING = 0,
 		RESET_POINTERS_TO_NULL,
 		/* reset pointers to null and all other values to zero or false. */
-				RESET_EVERYTHING_TO_DEFAULTS,
+		RESET_EVERYTHING_TO_DEFAULTS,
 	};
 
 	class CFG_API Value
@@ -112,6 +112,18 @@ namespace cfg
 		bool isInteger() const { return mType == TYPE_INT; }
 		bool isNumber() const { return isInteger() || isFloat(); }
 		bool isText() const { return mType == TYPE_TEXT; }
+		/**
+		 * Check if it is a "simple" value.
+		 * A simple value is != a primitive value.
+		 * A value which can be represented by a single value (no object, no array, no none).
+		 * String is a simple value.
+		 * TYPE_NONE is NOT a simple value!
+		 * TYPE_COMMENT is NOT a simple value!
+		 * @return Return true if it is simple.
+		 */
+		bool isSimple() const { return mType == TYPE_NULL ||
+					mType == TYPE_BOOL || mType == TYPE_FLOAT ||
+					mType == TYPE_INT || mType == TYPE_TEXT; }
 		bool isArray() const { return mType == TYPE_ARRAY; }
 		bool isNoObject() const { return mType == TYPE_NONE || mType == TYPE_NULL ||
 				mType == TYPE_BOOL || mType == TYPE_FLOAT ||

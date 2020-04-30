@@ -51,7 +51,7 @@ bool cfg::TmlParser::begin()
 	return true;
 }
 
-int cfg::TmlParser::getNextSmlEntry(NameValuePair& entry)
+int cfg::TmlParser::getNextTmlEntry(NameValuePair& entry)
 {
 	getline(mIfs, mLine);
 	if (mIfs.fail()) {
@@ -59,10 +59,10 @@ int cfg::TmlParser::getNextSmlEntry(NameValuePair& entry)
 		return -2;
 	}
 	++mLineNumber;
-	return getNextSmlEntry(mLine, entry, mLineNumber);
+	return getNextTmlEntry(mLine, entry, mLineNumber);
 }
 
-int cfg::TmlParser::getNextSmlEntry(std::string& utf8Line, NameValuePair& entry,
+int cfg::TmlParser::getNextTmlEntry(std::string& utf8Line, NameValuePair& entry,
 		int lineNumber)
 {
 	entry.clear();
@@ -340,7 +340,7 @@ bool cfg::TmlParser::getAsTree(Value &root,
 	int prevDeep = 0;
 	unsigned int currentContiguousEmptyOrCommentCount = 0;
 
-	while ((deep = getNextSmlEntry(cfgPair)) >= 0) {
+	while ((deep = getNextTmlEntry(cfgPair)) >= 0) {
 
 		if (!cfgPair.isEmptyOrComment()) {
 			if (deep > prevDeep) {

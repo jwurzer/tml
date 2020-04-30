@@ -1,6 +1,7 @@
 #include <tml/tml_parser.h>
 #include <cfg/cfg.h>
 #include <cfg/cfg_string.h>
+#include <tml/tml_string.h>
 
 #include <string>
 #include <iostream>
@@ -14,9 +15,11 @@ namespace
 				"\n" <<
 				"commands and args:\n" <<
 				"------------------\n" <<
-				"  help                     ... print this help\n" <<
-				"  print <filename>         ... print the tml file\n" <<
-				"  print-values <filename>  ... print the tml file without empty lines and comments\n" <<
+				"  help                        ... print this help\n" <<
+				"  print <filename>            ... print the tml file\n" <<
+				"  print-values <filename>     ... print the tml file without empty lines and comments\n" <<
+				"  print-tml <filename>        ... print the tml file in tml-format\n" <<
+				"  print-tml-values <filename> ... print the tml file without empty lines and comments in tml-format\n" <<
 				std::endl;
 	}
 
@@ -30,6 +33,21 @@ namespace
 			return 1;
 		}
 		std::string s = cfg::cfgstring::nameValuePairToString(0, cvp);
+		std::cout << s << std::endl;
+		return 0;
+	}
+
+	int printTmlAsTml(const char* filename, bool inclEmptyLines, bool inclComments)
+	{
+		cfg::TmlParser p(filename);
+		cfg::NameValuePair cvp;
+		if (!p.getAsTree(cvp, inclEmptyLines, inclComments)) {
+			std::cerr << "parse " << filename << " failed" << std::endl;
+			std::cerr << "error: " << p.getExtendedErrorMsg() << std::endl;
+			return 1;
+		}
+		//std::string s = cfg::tmlstring::nameValuePairToString(0, cvp);
+		std::string s = cfg::tmlstring::valueToString(0, cvp.mValue);
 		std::cout << s << std::endl;
 		return 0;
 	}
@@ -66,6 +84,22 @@ int main(int argc, char* argv[])
 			return 1;
 		}
 		return printTml(argv[2], false, false);
+	}
+	if (command == "print-tml") {
+		if (argc != 3) {
+			std::cerr << "print command need exactly one argument/filename" << std::endl;
+			printHelp(argv[0]);
+			return 1;
+		}
+		return printTmlAsTml(argv[2], true, true);
+	}
+	if (command == "print-tml-values") {
+		if (argc != 3) {
+			std::cerr << "print command need exactly one argument/filename" << std::endl;
+			printHelp(argv[0]);
+			return 1;
+		}
+		return printTmlAsTml(argv[2], false, false);
 	}
 	std::cerr << "command '" << command << "' is not supported" << std::endl;
 	printHelp(argv[0]);

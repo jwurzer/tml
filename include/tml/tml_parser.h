@@ -24,9 +24,9 @@ namespace cfg
 		bool setFilename(const std::string& filename);
 		bool begin();
 		// return -1 for error, -2 for end of file or deep count for success
-		int getNextSmlEntry(NameValuePair& entry);
+		int getNextTmlEntry(NameValuePair& entry);
 		// return -1 for error or deep count for success
-		int getNextSmlEntry(std::string& utf8Line, NameValuePair& entry,
+		int getNextTmlEntry(std::string& utf8Line, NameValuePair& entry,
 				int lineNumber);
 		bool getAsTree(NameValuePair &root,
 				bool inclEmptyLines = false, bool inclComments = false);
