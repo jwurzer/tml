@@ -8,6 +8,7 @@ ifeq ($(OS),Windows_NT)
 	cd build && cmake -G "Visual Studio 15" ..
 else
 	cd build; cmake ..
+	#cd build; cmake -DCMAKE_BUILD_TYPE=Debug ..
 endif
 
 compile:

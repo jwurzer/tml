@@ -67,7 +67,7 @@ Objects can be nested like the following example:
 			links = 6
 			numbers = 4 2 8 0 2 4
 
-
+TML also supports templates (prefabs) and special name-value pairs. For more details see the [TML Specification](tml-specification.md) file.
 
 License
 -------

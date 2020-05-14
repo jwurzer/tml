@@ -173,8 +173,8 @@ void cfg::tmlstring::nameValuePairToStringStream(unsigned int deep,
 		ss << "#" << cfgPair.mName.mText << "\n";
 		return;
 	}
-	if (!cfgPair.mName.isSimple()) {
-		ss << "name can be only a simple value";
+	if (cfgPair.mName.isObject()) {
+		ss << "name can't be an object\n";
 		return;
 	}
 	addTab(ss, deep);

@@ -1,0 +1,19 @@
+
+template
+	name = COLOR
+	parameters = RED GREEN BLUE ALPHA
+	alpha-for-fill = ALPHA
+	color = RED GREEN BLUE
+template
+	name = SWITCH-RGB
+	parameters = RED GREEN BLUE ALPHA
+	use-template COLOR BLUE GREEN RED ALPHA
+game-object
+	game-object
+		mesh = MESH-A
+		use-template COLOR 1.0 0.5 0.0 1.0
+	game-object
+		mesh = MESH-B
+		use-template SWITCH-RGB 0.0 0.0 1.0 1.0
+		texture = NORMAL
+

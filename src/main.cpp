@@ -1,6 +1,7 @@
 #include <tml/tml_parser.h>
 #include <cfg/cfg.h>
 #include <cfg/cfg_string.h>
+#include <cfg/cfg_template.h>
 #include <tml/tml_string.h>
 
 #include <string>
@@ -20,6 +21,7 @@ namespace
 				"  print-values <filename>     ... print the tml file without empty lines and comments\n" <<
 				"  print-tml <filename>        ... print the tml file in tml-format\n" <<
 				"  print-tml-values <filename> ... print the tml file without empty lines and comments in tml-format\n" <<
+				"  templates <filename>        ... load and print templates from tml file\n" <<
 				std::endl;
 	}
 
@@ -51,6 +53,44 @@ namespace
 		std::cout << s << std::endl;
 		return 0;
 	}
+
+	int loadAndPrintTemplates(const char* filename)
+	{
+		cfg::TmlParser p(filename);
+		cfg::NameValuePair cvp;
+		if (!p.getAsTree(cvp, true, true)) {
+			std::cerr << "parse " << filename << " failed" << std::endl;
+			std::cerr << "error: " << p.getExtendedErrorMsg() << std::endl;
+			return 1;
+		}
+		cfg::cfgtemp::TemplateMap templateMap;
+		std::string outErrorMsg;
+		if (!cfg::cfgtemp::addTemplates(templateMap, cvp.mValue,
+				true /* removeTemplatesFromCfgValue */,
+				"template",
+				outErrorMsg)) {
+			std::cerr << "error: " << outErrorMsg << std::endl;
+			return 1;
+		}
+		std::cout << "templates: " << templateMap.size() << std::endl;
+		for (const auto& temp : templateMap) {
+			std::cout << temp.second.toString();
+		}
+		std::string s = cfg::tmlstring::valueToString(0, cvp.mValue);
+		std::cout << "============================================" << std::endl;
+		std::cout << s << std::endl;
+		std::cout << "============================================" << std::endl;
+		outErrorMsg.clear();
+		if (!cfg::cfgtemp::useTemplates(templateMap, cvp.mValue, "use-template", outErrorMsg)) {
+			std::cerr << "error: " << outErrorMsg << std::endl;
+			return 1;
+		}
+		s = cfg::tmlstring::valueToString(0, cvp.mValue);
+		std::cout << "============================================" << std::endl;
+		std::cout << s << std::endl;
+		std::cout << "============================================" << std::endl;
+		return 0;
+	}
 }
 
 int main(int argc, char* argv[])
@@ -79,7 +119,7 @@ int main(int argc, char* argv[])
 	}
 	if (command == "print-values") {
 		if (argc != 3) {
-			std::cerr << "print command need exactly one argument/filename" << std::endl;
+			std::cerr << "print-values command need exactly one argument/filename" << std::endl;
 			printHelp(argv[0]);
 			return 1;
 		}
@@ -87,7 +127,7 @@ int main(int argc, char* argv[])
 	}
 	if (command == "print-tml") {
 		if (argc != 3) {
-			std::cerr << "print command need exactly one argument/filename" << std::endl;
+			std::cerr << "print-tml command need exactly one argument/filename" << std::endl;
 			printHelp(argv[0]);
 			return 1;
 		}
@@ -95,11 +135,19 @@ int main(int argc, char* argv[])
 	}
 	if (command == "print-tml-values") {
 		if (argc != 3) {
-			std::cerr << "print command need exactly one argument/filename" << std::endl;
+			std::cerr << "print-tml-values command need exactly one argument/filename" << std::endl;
 			printHelp(argv[0]);
 			return 1;
 		}
 		return printTmlAsTml(argv[2], false, false);
+	}
+	if (command == "templates") {
+		if (argc != 3) {
+			std::cerr << "templates command need exactly one argument/filename" << std::endl;
+			printHelp(argv[0]);
+			return 1;
+		}
+		return loadAndPrintTemplates(argv[2]);
 	}
 	std::cerr << "command '" << command << "' is not supported" << std::endl;
 	printHelp(argv[0]);
