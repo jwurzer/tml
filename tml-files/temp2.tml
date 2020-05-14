@@ -1,0 +1,28 @@
+
+template
+	name = ITEM-A
+	parameters = none
+	entity
+		texture-component
+			tex-id-unit-0 = TEX1
+		shader-component
+			shader-program-id = SHADER1
+		mesh-component
+			mesh-id = MESH1
+scenes
+	scene
+		id = SCENE-ONE
+		entity
+			transform-component
+				translate -20.0 0.0
+				scale 2.5 2.5
+			use-template ITEM-A
+		entity
+			transform-component
+				translate 200.0 100.0
+			use-template ITEM-A
+		entity
+			transform-component
+				translate 300.0 500.0
+				rotate-degree 45
+			use-template ITEM-A

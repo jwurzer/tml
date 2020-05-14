@@ -1,0 +1,78 @@
+
+template
+
+	# template name
+	name = XYZ
+
+	# parameters
+	parameters = RED GREEN BLUE ALPHA
+	# a comment
+
+	entity
+		# bla bla
+			# bla bla2
+				# bla bla3
+		texture-component
+			asdf
+		color-component
+			color-0 = RED GREEN BLUE ALPHA
+template
+	name = TEST
+	parameters = none
+	entity
+		texture-component
+			asdf
+		color-component
+			color-0 = 1.0 0.0 0.5 1.0
+	entity
+		id = NUM1
+	entity
+
+template
+	name = ABCCC
+	parameters = PARAM1 PARAM2
+	asdf from ABCCC PARAM1 xyz PARAM2 abc PARAM1
+	#use-template TEST2 PARAM2 PARAM1
+
+template
+	name = TEST2
+	parameters = PARAM1 PARAM2
+	#asdf PARAM1 xyz PARAM2 abc PARAM1
+	use-template ABCCC PARAM2 PARAM1
+
+template
+	name = TEST3
+	parameters = PARAM1 PARAM2
+	asdf PARAM1 xyz PARAM2 abc PARAM1 = use-template TEST2 alice bob
+	use-template TEST
+	use-template TEST4 PARAM2
+	use-template XYZ 0.1 0.2 0.3 0.4
+
+template
+	name = TEST4
+	parameters = PARAM1
+	asdf PARAM1 xyz PARAM2 abc PARAM1 = use-template TEST2 alice bob
+	use-template TEST
+	#use-template TEST3 PARAM2 PARAM1
+	use-template XYZ 0.1 0.2 0.3 0.4
+
+asdf = asdf
+test-for-template
+	use-template TEST
+xyz
+	xyz1
+		use-template XYZ 1.0 0.5 0.7 1.0
+usw = use-template TEST2 0 -1
+use-template TEST2 1 2
+	use-template TEST2 3 4 = use-template TEST2 5 6
+	use-template TEST2 7 8 = a b c d e f
+test
+	use-template TEST3 7 77
+use-template TEST3 7 77
+test
+	use-template TEST3 7 77
+	test2
+		use-template TEST3 7 77
+		test3
+			use-template TEST3 7 77
+test
