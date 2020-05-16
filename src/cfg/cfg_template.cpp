@@ -1,5 +1,6 @@
 #include <cfg/cfg_template.h>
 #include <tml/tml_string.h>
+#include <tml/tml_parser.h>
 #include <sstream>
 
 #define MAX_RECURSIVE_DEEP 50
@@ -491,6 +492,21 @@ std::string cfg::CfgTemplate::toString() const
 		cfg::tmlstring::nameValuePairToStringStream(1, pair, ss);
 	}
 	return ss.str();
+}
+
+bool cfg::cfgtemp::addTemplates(TemplateMap& templateMap,
+		const std::string& tmlFilename, bool inclEmptyLines, bool inclComments,
+		const std::string& templateKeyword)
+{
+	TmlParser parser(tmlFilename);
+	if (!parser.begin()) {
+		return false;
+	}
+	Value root;
+	if (!parser.getAsTree(root, inclEmptyLines, inclComments)) {
+		return false;
+	}
+	return addTemplates(templateMap, root, false, templateKeyword);
 }
 
 bool cfg::cfgtemp::addTemplates(TemplateMap& templateMap, Value& cfgValue,

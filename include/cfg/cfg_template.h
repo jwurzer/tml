@@ -1,12 +1,13 @@
 #ifndef CFG_CFG_TEMPLATE_H
 #define CFG_CFG_TEMPLATE_H
 
+#include <cfg/export.h>
 #include <cfg/cfg.h>
 #include <map>
 
 namespace cfg
 {
-	class CfgTemplate
+	class CFG_API CfgTemplate
 	{
 	public:
 		CfgTemplate(const std::string& name,
@@ -28,12 +29,18 @@ namespace cfg
 	{
 		typedef std::map<std::string, CfgTemplate> TemplateMap;
 
+		CFG_API
+		bool addTemplates(TemplateMap& templateMap, const std::string& tmlFilename,
+				bool inclEmptyLines = false, bool inclComments = false,
+				const std::string& templateKeyword = "template");
+
 		/**
 		 * Check the value tree (cfgValue) for templates and add all founded
 		 * templates to the templateMap.
 		 * @return Return true for success. False for a wrong template (wrong syntax).
 		 *         If no template was found then also true is returned.
 		 */
+		CFG_API
 		bool addTemplates(TemplateMap& templateMap, Value& cfgValue,
 				bool removeTemplatesFromCfgValue,
 				const std::string& templateKeyword = "template");
@@ -44,6 +51,7 @@ namespace cfg
 		 * @return Return true for success. False for a wrong template (wrong syntax).
 		 *         If no template was found then also true is returned.
 		 */
+		CFG_API
 		bool addTemplates(TemplateMap& templateMap, Value& cfgValue,
 				bool removeTemplatesFromCfgValue,
 				const std::string& templateKeyword,
@@ -56,6 +64,7 @@ namespace cfg
 		 *         True for success. True is also returned if no template
 		 *         was replaced (no "use-template" reference was used).
 		 */
+		CFG_API
 		bool useTemplates(const TemplateMap& templateMap, Value& cfgValue,
 				const std::string& useTemplateKeyword = "use-template");
 
@@ -66,6 +75,7 @@ namespace cfg
 		 *         True for success. True is also returned if no template
 		 *         was replaced (no "use-template" reference was used).
 		 */
+		CFG_API
 		bool useTemplates(const TemplateMap& templateMap, Value& cfgValue,
 				const std::string& useTemplateKeyword, std::string& outErrorMsg);
 	}
