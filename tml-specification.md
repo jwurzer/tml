@@ -85,7 +85,7 @@ Such name-value pairs are not compatible with other data-serialization languages
 
 ## Templates (prefabs)
 
-TML also supports templates (`template`) and template references (`use-template`). With template references a template can be used multiple times. The sense behind this is that objects can be defined as templates and these objects can be used several times. The content of a template can also be a simple name-value pair.
+TML also supports templates (`template`) and template references (`use-template`). With template references a template can be used multiple times. The sense behind this is that objects can be defined as templates and these objects can be used several times. The content of a template can also be a simple name-value pair. Also multiple name-value pairs at one template are allowed. A template represents one or more name-value pairs. A template can't be used to represent a single value. Only a value-pair is possible.
 
 A template is a TML object with the name/keyword `template`.
 This object must define a `name` and `parameters`. If no parameters are used then the value `none` must be used.

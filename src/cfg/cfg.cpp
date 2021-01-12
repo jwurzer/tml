@@ -28,7 +28,9 @@ namespace cfg
 				return -1; // no other rule allowed
 			}
 			// not found --> search before the current rule index
-			for (std::size_t i = 0; i < curRuleIndex; i++) {
+			// The additional check with i < rulesSize is necessary because
+			// curRuleIndex can be greater than rulesSize.
+			for (std::size_t i = 0; i < curRuleIndex && i < rulesSize; i++) {
 				if (ruleName == rules[i].mName) {
 					return i;
 				}
@@ -348,19 +350,20 @@ int cfg::Value::objectGetAttrIndex(const std::string &attrName) const
 }
 
 int cfg::Value::objectGet(const SelectRule *rules,
-		bool allowRandomSequence,
-		bool allowUnusedValuePairs, bool allowEarlyReturn,
-		bool allowDuplicatedNames,
+		bool allowRandomSequence, bool allowUnusedValuePairs,
+		bool allowEarlyReturn, bool allowDuplicatedNames,
 		bool allowDuplicatedRuleNamesWithDiffTypes,
 		std::size_t startIndex, std::size_t *outNextIndex,
-		EReset reset,
-		std::string* errMsg) const
+		EReset reset, std::string* errMsg, std::string* warnings) const
 {
 	std::size_t rulesSize = 0;
 	unsigned int finalMustExistCount = 0;
 	unsigned int currentMustExistCount = 0;
 	if (errMsg) {
 		errMsg->clear();
+	}
+	if (warnings) {
+		warnings->clear();
 	}
 	while (rules[rulesSize].mType != SelectRule::TYPE_UNKNOWN) {
 		if (reset != EReset::RESET_NOTHING && rules[rulesSize].mStorePtr.mPtr) {
@@ -429,8 +432,7 @@ int cfg::Value::objectGet(const SelectRule *rules,
 	std::size_t curRuleIndex = 0;
 	std::size_t storeCount = 0;
 
-	std::size_t usedRuleCounts[64];
-	memset(usedRuleCounts, 0, sizeof(usedRuleCounts));
+	std::size_t usedRuleCounts[64] = {};
 	if (rulesSize > 64) {
 		if (errMsg) {
 			*errMsg = "Too many config rules (" + std::to_string(rulesSize) + " > 64)";
@@ -440,13 +442,27 @@ int cfg::Value::objectGet(const SelectRule *rules,
 
 	std::size_t i = startIndex;
 	bool prevTypeWasWrong = false;
-	for (; i < pairCount && storeCount < rulesSize; ++i) {
+	for (; storeCount < rulesSize; ++i) {
 		if (prevTypeWasWrong) {
 			--i; // revert the ++i from loop
+		}
+
+		// This check must be made after the prevTypeWasWrong check and
+		// not before in the for-condition.
+		// It's not possible to use i < pairCount in for() instead because
+		// then the logic doesn't work correct if the last name-value pair
+		// has a wrong type. Because then ++i would be equal pairCount -->
+		// loop finished --> --i not executed --> no next rule for wrong type
+		// if last name-value pair has rule with wrong type.
+		if (i >= pairCount) {
+			break;
 		}
 		const NameValuePair& vp = mObject[i];
 
 		if (vp.isEmpty() || vp.isComment()) {
+			// Should never be possible that prevTypeWasWrong is not already false.
+			// But better safe than sorry.
+			prevTypeWasWrong = false;
 			continue;
 		}
 
@@ -457,23 +473,35 @@ int cfg::Value::objectGet(const SelectRule *rules,
 		// find the correct rule
 		int ri = getRuleIndex(vpAttrName, curRuleIndex,
 				rules, rulesSize, allowRandomSequence && !prevTypeWasWrong);
-		// now we can reset prevTypeWasWrong (if it was set). Before its not
-		// possible because getRuleIndex() need this variable!
-		prevTypeWasWrong = false;
 		if (ri < 0) {
+			int riWithRandomSequence = getRuleIndex(vpAttrName, curRuleIndex,
+					rules, rulesSize, !prevTypeWasWrong);
+
+			// now we can reset prevTypeWasWrong (if it was set). Before its not
+			// possible because getRuleIndex() need this variable!
+			prevTypeWasWrong = false;
+
 			// no rule found for this attr name
 			if (allowUnusedValuePairs) {
+				if (riWithRandomSequence >= 0 && warnings) {
+					*warnings += "attr name '" + vpAttrName +
+							"' has the wrong position/order and is ignored (unused name-value pair).\n";
+				}
 				continue;
 			}
 			if (allowEarlyReturn && finalMustExistCount == currentMustExistCount) {
 				std::size_t ii = i;
+				// here i < pairCount is ok in for() because no --i is possible
+				// in this loop. See for() loop above for more infos.
 				for (; i < pairCount && storeCount < rulesSize; ++i) {
 					const NameValuePair& vp = mObject[i];
 					const std::string& vpAttrName =
 							(vp.mName.mType == Value::TYPE_TEXT) ?
 							vp.mName.mText : "";
+					// allowRandomSequence is here independent of prevTypeWasWrong
+					// no && !prevTypeWasWrong for getRuleIndex.
 					if (getRuleIndex(vpAttrName, curRuleIndex,
-							rules, rulesSize, allowRandomSequence && !prevTypeWasWrong) >= 0) {
+							rules, rulesSize, allowRandomSequence) >= 0) {
 						if (errMsg) {
 							*errMsg = "rule for attr name '" + vpAttrName + "' is not allowed here";
 						}
@@ -487,10 +515,19 @@ int cfg::Value::objectGet(const SelectRule *rules,
 				return storeCount;
 			}
 			if (errMsg) {
-				*errMsg = "no rule found for attr name '" + vpAttrName + "'";
+				if (riWithRandomSequence >= 0) {
+					*errMsg = "attr name '" + vpAttrName + "' has the wrong position/order. Random sequence is not allowed.";
+				}
+				else {
+					*errMsg = "no rule found for attr name '" + vpAttrName + "'";
+				}
 			}
 			return -3;
 		}
+		// now we can reset prevTypeWasWrong (if it was set). Before its not
+		// possible because getRuleIndex() need this variable!
+		prevTypeWasWrong = false;
+
 		curRuleIndex = ri;
 		++usedRuleCounts[curRuleIndex];
 		if (rules[curRuleIndex].mUsedCount) {
@@ -500,16 +537,6 @@ int cfg::Value::objectGet(const SelectRule *rules,
 		if (usedRuleCounts[curRuleIndex] == 1 &&
 				rules[curRuleIndex].mRule == SelectRule::RULE_MUST_EXIST) {
 			++currentMustExistCount;
-		}
-		if (usedRuleCounts[curRuleIndex] > 1) {
-			if (allowDuplicatedNames) {
-				curRuleIndex++; // no problem if out of range because getRuleIndex() check this
-				continue; // ignore duplicates --> jump to next
-			}
-			if (errMsg) {
-				*errMsg = "found duplicated rule for attr name '" + vpAttrName + "'";
-			}
-			return -4;
 		}
 
 		const SelectRule& rule = rules[curRuleIndex];
@@ -550,6 +577,21 @@ int cfg::Value::objectGet(const SelectRule *rules,
 			}
 			return -5;
 		}
+
+		// The duplication check must be here after the type check. Because
+		// if the type is wrong then the rule is not applied and therefore
+		// not duplicated.
+		if (usedRuleCounts[curRuleIndex] > 1) {
+			if (allowDuplicatedNames) {
+				curRuleIndex++; // no problem if out of range because getRuleIndex() check this
+				continue; // ignore duplicates --> jump to next
+			}
+			if (errMsg) {
+				*errMsg = "found duplicated rule for attr name '" + vpAttrName + "'";
+			}
+			return -4;
+		}
+
 		switch (rule.mType) {
 			case SelectRule::TYPE_UNKNOWN:
 				return -1; // unknown is not allowed

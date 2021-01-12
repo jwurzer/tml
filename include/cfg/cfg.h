@@ -168,16 +168,53 @@ namespace cfg
 		 *
 		 * @param rules The size limit is 64 without the termination rule
 		 *              (64 rules + 1 termination rule)
-		 * @param allowRandomSequence
-		 * @param allowUnusedValuePairs
-		 * @param allowEarlyReturn This value is only used wenn allowUnusedValuePairs is false.
+		 * @param allowRandomSequence If true then the name-value pairs don't
+		 *        need the same order as the select rules. If false then
+		 *        the name-value pair must have the same order as the select rules.
+		 * @param allowUnusedValuePairs If true then name-value pairs can be
+		 *        skipped if no matching select-rules are found.
+		 *        If false and a name-value pair has no select-rule then
+		 *        this function will fail.
+		 * @param allowEarlyReturn This value is only used when allowUnusedValuePairs is false.
 		 *        If allowUnusedValuePairs is false and this parameter is true
 		 *        then if no rule is found for the current attribute name
 		 *        the function can also return successful. It return successful
 		 *        if all "must exist" rules already applied and no future
 		 *        attribute name has an existing rule at the rule set.
-		 * @param allowDuplicatedNames
-		 * @param startIndex
+		 * @param allowDuplicatedNames True means that a select-rule from the
+		 *        rules array is allowed to be used multiple times.
+		 *        This means that more than one name-value pair with the
+		 *        same name and the same value type is allowed.
+		 *        This doesn't mean that the rules-array can have multiple
+		 *        rules with the same name. This only means that a rule can
+		 *        be used multiple times by parsing the config object.
+		 *        If the rule is applied multiple times then the value of
+		 *        the first name-value pair is stored. The other values are
+		 *        discarded/dropped.
+		 * @param allowDuplicatedRuleNamesWithDiffTypes Means that the
+		 *        rules-array can have multiple rules with the same name.
+		 *        The type should be different because otherwise it make no
+		 *        sense.
+		 *        This doesn't mean that a rule with a specific type can
+		 *        be used multiple times by parsing the config object. For
+		 *        this case allowDuplicatesNames exist.
+		 *        The parameters allowDuplicatedRuleNamesWithDiffTypes and
+		 *        allowDuplicatesNames can be combined but does not have to
+		 *        be combined.
+		 * @param startIndex Start index of the first name-value pair.
+		 *        The name-value pairs before the start index are skipped
+		 *        for the select rules. Skipping select rules with start
+		 *        index is NOT possible. The start index refers to the
+		 *        start position of the name-value pairs and not to the
+		 *        select rules.
+		 * @param outNextIndex Can be null. If not null then the next unused
+		 *        index of name value pairs is stored. This is the index +1
+		 *        after the last used name-value pair (highest used index).
+		 * @param reset Define if the values for storing should be reset to
+		 *        defaults or only pointers should be set to null or nothing
+		 *        should happend before parsing.
+		 * @param errMsg Can be null. If not null then the error message is
+		 *        stored (if an error happend).
 		 * @return Return the store count.
 		 */
 		int objectGet(const SelectRule *rules, bool allowRandomSequence,
@@ -187,7 +224,8 @@ namespace cfg
 				std::size_t startIndex,
 				std::size_t *outNextIndex,
 				EReset reset = EReset::RESET_POINTERS_TO_NULL,
-				std::string* errMsg = nullptr) const;
+				std::string* errMsg = nullptr,
+				std::string* warnings = nullptr) const;
 	};
 
 	/**
@@ -311,6 +349,25 @@ namespace cfg
 				mAllowedTypes(typeFlags),
 				mUsedCount(usedCount)
 				{ mStorePtr.mBool = boolPtr; }
+
+		static SelectRule nullRule(const char* name, bool* boolPtr, ERule rule,
+				unsigned int typeFlags = ALLOW_NULL, unsigned int* usedCount = nullptr)
+		{
+			SelectRule sr(name, boolPtr, rule, typeFlags, usedCount);
+			sr.mType = TYPE_NULL;
+			sr.mStorePtr.mBool = nullptr;
+			sr.mStorePtr.mNull = boolPtr;
+			return sr;
+		}
+		static SelectRule nullRule(const std::string& name, bool* boolPtr, ERule rule,
+				unsigned int typeFlags = ALLOW_NULL, unsigned int* usedCount = nullptr)
+		{
+			SelectRule sr(name, boolPtr, rule, typeFlags, usedCount);
+			sr.mType = TYPE_NULL;
+			sr.mStorePtr.mBool = nullptr;
+			sr.mStorePtr.mNull = boolPtr;
+			return sr;
+		}
 
 		SelectRule(const char* name, float* floatPtr, ERule rule,
 				unsigned int typeFlags = ALLOW_NUMBER, unsigned int* usedCount = nullptr)
