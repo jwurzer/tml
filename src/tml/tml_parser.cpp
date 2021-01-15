@@ -78,8 +78,11 @@ int cfg::TmlParser::getNextTmlEntry(NameValuePair& entry)
 	getline(mIfs, mLine);
 	if (mIfs.eof()) {
 		mIfs.close();
-		mErrorCode = -3;
-		return -2;
+		// no error code and no return here because if last line with content
+		// has no line break at the end then eof() is already true, but
+		// the line should not be discard --> no error and no return.
+		//mErrorCode = -3; // would be wrong here
+		//return -2; // would be wrong here
 	}
 	if (mIfs.fail()) {
 		mErrorCode = -3;
