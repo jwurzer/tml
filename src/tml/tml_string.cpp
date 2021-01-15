@@ -6,8 +6,11 @@ namespace cfg
 {
 	namespace
 	{
-		void addTab(std::stringstream& ssout, unsigned int count)
+		void addTab(std::stringstream& ssout, int count)
 		{
+			if (count < 0) {
+				return;
+			}
 			switch (count) {
 				case 0:
 					break;
@@ -27,7 +30,7 @@ namespace cfg
 					ssout << "\t\t\t\t\t";
 					break;
 				default:
-					for (unsigned int i = 0; i < count; i++) {
+					for (int i = 0; i < count; i++) {
 						ssout << '\t';
 					}
 					break;
@@ -123,48 +126,55 @@ namespace cfg
 		}
 
 		void addObjectToStringStream(unsigned int deep,
-				const Value &cfgValue, std::stringstream& ss)
+				const Value &cfgValue, std::stringstream& ss,
+				bool forceDeepByStoredDeepValue)
 		{
 			for (const auto& cfgPair : cfgValue.mObject) {
-				tmlstring::nameValuePairToStringStream(deep, cfgPair, ss);
+				tmlstring::nameValuePairToStringStream(deep, cfgPair, ss,
+						forceDeepByStoredDeepValue);
 			}
 		}
 	}
 }
 
 void cfg::tmlstring::valueToStringStream(unsigned int deep,
-		const Value &cfgValue, std::stringstream& ss)
+		const Value &cfgValue, std::stringstream& ss,
+		bool forceDeepByStoredDeepValue, int storedDeep)
 {
+	if (storedDeep <= -2) {
+		storedDeep = deep;
+	}
 	if (cfgValue.isObject()) {
-		addObjectToStringStream(deep, cfgValue, ss);
+		addObjectToStringStream(deep, cfgValue, ss, forceDeepByStoredDeepValue);
 	}
 	else {
-		addTab(ss, deep);
+		addTab(ss, forceDeepByStoredDeepValue ? storedDeep : deep);
 		addValueToStringStream(cfgValue, ss);
 		ss << "\n";
 	}
 }
 
 std::string cfg::tmlstring::valueToString(unsigned int deep,
-		const Value& cfgValue)
+		const Value& cfgValue, bool forceDeepByStoredDeepValue, int storedDeep)
 {
 	std::stringstream ss;
-	valueToStringStream(deep, cfgValue, ss);
+	valueToStringStream(deep, cfgValue, ss, forceDeepByStoredDeepValue, storedDeep);
 	return ss.str();
 }
 
 void cfg::tmlstring::nameValuePairToStringStream(unsigned int deep,
-		const NameValuePair& cfgPair, std::stringstream& ss)
+		const NameValuePair& cfgPair, std::stringstream& ss,
+		bool forceDeepByStoredDeepValue)
 {
 	if (cfgPair.mName.isEmpty() && cfgPair.mValue.isEmpty()) {
-		if (cfgPair.mDeep >= 0) {
-			addTab(ss, cfgPair.mDeep);
-		}
+		addTab(ss, cfgPair.mDeep); // if mDeep is negative then its ignored
 		ss << "\n";
 		return;
 	}
 	if (cfgPair.mName.isComment() && cfgPair.mValue.isEmpty()) {
-		if (cfgPair.mDeep >= 0) {
+		if (cfgPair.mDeep >= 0 || forceDeepByStoredDeepValue) {
+			// if mDeep is negative (can only be the case if
+			// forceDeepByStoredDeepValue is true) then its ignored
 			addTab(ss, cfgPair.mDeep);
 		}
 		else {
@@ -177,11 +187,12 @@ void cfg::tmlstring::nameValuePairToStringStream(unsigned int deep,
 		ss << "name can't be an object\n";
 		return;
 	}
-	addTab(ss, deep);
+	addTab(ss, forceDeepByStoredDeepValue ? cfgPair.mDeep : deep);
 	addValueToStringStream(cfgPair.mName, ss);
 	if (cfgPair.mValue.isObject()) {
 		ss << "\n";
-		addObjectToStringStream(deep + 1, cfgPair.mValue, ss);
+		addObjectToStringStream(deep + 1, cfgPair.mValue, ss,
+				forceDeepByStoredDeepValue);
 	}
 	else if (cfgPair.mValue.isEmpty()) {
 		ss << "\n";
@@ -194,9 +205,10 @@ void cfg::tmlstring::nameValuePairToStringStream(unsigned int deep,
 }
 
 std::string cfg::tmlstring::nameValuePairToString(unsigned int deep,
-		const NameValuePair &cfgPair)
+		const NameValuePair &cfgPair,
+		bool forceDeepByStoredDeepValue)
 {
 	std::stringstream ss;
-	nameValuePairToStringStream(deep, cfgPair, ss);
+	nameValuePairToStringStream(deep, cfgPair, ss, forceDeepByStoredDeepValue);
 	return ss.str();
 }

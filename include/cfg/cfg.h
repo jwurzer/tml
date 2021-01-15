@@ -84,7 +84,11 @@ namespace cfg
 		std::vector<NameValuePair> mObject;
 
 		Value();
-		~Value();
+		Value(Value&& other);
+		Value& operator=(Value&& other);
+		Value(const Value& other) = default;
+		Value& operator=(const Value& other) = default;
+		//~Value(); // default destructor is enougth
 
 		// return line number and offset as :<line-number>:<offset>
 		// If only a line number is set then :<line-number> is returned.
@@ -243,7 +247,11 @@ namespace cfg
 		int mDeep;
 
 		NameValuePair();
-		~NameValuePair();
+		NameValuePair(NameValuePair&& other);
+		NameValuePair& operator=(NameValuePair&& other);
+		NameValuePair(const NameValuePair& other) = default;
+		NameValuePair& operator=(const NameValuePair& other) = default;
+		//~NameValuePair(); // default destructor is enougth
 
 		void clear();
 		void setTextBool(const std::string& attrName, bool attrValue);

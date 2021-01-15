@@ -25,8 +25,24 @@ cfg::TmlParser::~TmlParser()
 	}
 }
 
+void cfg::TmlParser::reset()
+{
+	if (mIfs.is_open()) {
+		mIfs.close();
+	}
+	mIfs.clear();
+	mLine.clear();
+	mErrorCode = 0;
+	mErrorMsg.clear();
+	mLineNumber = 0;
+	mIndentChar = 0;
+	mIndentCharCount = 1;
+}
+
 bool cfg::TmlParser::setFilename(const std::string& filename)
 {
+	reset();
+
 	mFilename = filename;
 	return true;
 }
@@ -38,6 +54,7 @@ bool cfg::TmlParser::begin()
 		mIfs.clear(); // clear error flags
 		mIfs.seekg(0, mIfs.beg);
 		if (mIfs.fail()) {
+			mErrorMsg = "Can't seek to the beginning.";
 			mErrorCode = -1;
 			return false;
 		}
@@ -45,6 +62,7 @@ bool cfg::TmlParser::begin()
 	}
 	mIfs.open(mFilename.c_str(), std::ifstream::in);
 	if (mIfs.fail()) {
+		mErrorMsg = "Can't open file.";
 		mErrorCode = -2;
 		return false;
 	}
@@ -53,7 +71,16 @@ bool cfg::TmlParser::begin()
 
 int cfg::TmlParser::getNextTmlEntry(NameValuePair& entry)
 {
+	if (!mIfs.is_open()) {
+		mErrorCode = -3;
+		return -2;
+	}
 	getline(mIfs, mLine);
+	if (mIfs.eof()) {
+		mIfs.close();
+		mErrorCode = -3;
+		return -2;
+	}
 	if (mIfs.fail()) {
 		mErrorCode = -3;
 		return -2;
@@ -321,7 +348,7 @@ bool cfg::TmlParser::getAsTree(Value &root,
 {
 	root.clear();
 	if (!begin()) {
-		mErrorMsg = "Jump to begin of file failed.";
+		// set no error message because this is already done by begin()
 		root.clear();
 		return false;
 	}
@@ -416,7 +443,7 @@ bool cfg::TmlParser::getAsTree(Value &root,
 				stack.back()->mOffset = deep * mIndentCharCount;
 				if (!tmp.empty()) {
 					// copy is no problem because the new object is empty
-					stack.back()->mObject = tmp;
+					stack.back()->mObject = std::move(tmp);
 				}
 				prevDeep = deep;
 			} else if (deep < prevDeep) {

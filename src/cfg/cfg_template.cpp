@@ -21,10 +21,9 @@ namespace cfg
 			 * to the correct deeps.
 			 */
 			void replaceDeepNumber(NameValuePair& nvp, int absDeep,
-					int relativeDeepDiff,
-					bool usingDeepAsRelativeDeepDiff) {
+					int relativeDeepDiff, bool usingRelativeDeepDiff) {
 				if (nvp.mDeep >= 0) {
-					if (usingDeepAsRelativeDeepDiff) {
+					if (usingRelativeDeepDiff) {
 						nvp.mDeep += relativeDeepDiff;
 					}
 					else {
@@ -34,13 +33,13 @@ namespace cfg
 				if (nvp.mName.isObject()) {
 					for (auto& child : nvp.mName.mObject) {
 						replaceDeepNumber(child, absDeep + 1, relativeDeepDiff,
-								usingDeepAsRelativeDeepDiff);
+								usingRelativeDeepDiff);
 					}
 				}
 				if (nvp.mValue.isObject()) {
 					for (auto& child : nvp.mValue.mObject) {
 						replaceDeepNumber(child, absDeep + 1, relativeDeepDiff,
-								usingDeepAsRelativeDeepDiff);
+								usingRelativeDeepDiff);
 					}
 				}
 			}
@@ -489,7 +488,7 @@ std::string cfg::CfgTemplate::toString() const
 	ss << "\n";
 	ss << "tml:\n";
 	for (const auto& pair : mObject) {
-		cfg::tmlstring::nameValuePairToStringStream(1, pair, ss);
+		cfg::tmlstring::nameValuePairToStringStream(1, pair, ss, false);
 	}
 	return ss.str();
 }

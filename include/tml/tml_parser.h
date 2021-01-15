@@ -21,6 +21,7 @@ namespace cfg
 		TmlParser();
 		TmlParser(const std::string& filename);
 		~TmlParser();
+		void reset();
 		bool setFilename(const std::string& filename);
 		bool begin();
 		// return -1 for error, -2 for end of file or deep count for success
