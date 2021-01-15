@@ -14,18 +14,22 @@ namespace cfg
 	{
 		CFG_API
 		void valueToStringStream(unsigned int deep,
-				const Value& cfgValue, std::stringstream& ss);
+				const Value& cfgValue, std::stringstream& ss,
+				bool forceDeepByStoredDeepValue = false, int storedDeep = -2);
 
 		CFG_API
-		std::string valueToString(unsigned int deep, const Value& cfgValue);
+		std::string valueToString(unsigned int deep, const Value& cfgValue,
+				bool forceDeepByStoredDeepValue = false, int storedDeep = -2);
 
 		CFG_API
 		void nameValuePairToStringStream(unsigned int deep,
-				const NameValuePair& cfgPair, std::stringstream& ss);
+				const NameValuePair& cfgPair, std::stringstream& ss,
+				bool forceDeepByStoredDeepValue = false);
 
 		CFG_API
 		std::string nameValuePairToString(unsigned int deep,
-				const NameValuePair& cfgPair);
+				const NameValuePair& cfgPair,
+				bool forceDeepByStoredDeepValue = false);
 	};
 }
 

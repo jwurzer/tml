@@ -1,0 +1,26 @@
+asdf
+sa dfl lkasdfkl sadfk l l
+asdf asdf sadf = 	q13re
+# askd f jklasdfjkl dasf jl
+
+#include inc1.tml
+
+include inc2.tml
+# uncomment next line for recursive include error
+#include inc-self.tml
+
+include sub/sub-inc.tml
+
+asdf
+	asdf
+		asdf
+			include inc2.tml
+			include inc3.tml
+			#include inc-empty.tml
+				include inc2.tml
+				include inc-empty.tml
+				xyz = hello hello hello
+				include inc4.tml
+			include inc2.tml
+
+end of file ;-)

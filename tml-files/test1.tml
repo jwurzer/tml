@@ -2,6 +2,9 @@
 asdf
 1
 4.5
+asdf 4.5 1 bool
+asdf0 5.5 1 false
+	asdf1 6.5 1 true
 # comment
 x = 34
 y = 8

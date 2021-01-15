@@ -2,7 +2,9 @@
 #include <cfg/cfg.h>
 #include <cfg/cfg_string.h>
 #include <cfg/cfg_template.h>
+#include <cfg/cfg_include.h>
 #include <tml/tml_string.h>
+#include <tml/tml_file_loader.h>
 
 #include <string>
 #include <iostream>
@@ -22,6 +24,7 @@ namespace
 				"  print-tml <filename>        ... print the tml file in tml-format\n" <<
 				"  print-tml-values <filename> ... print the tml file without empty lines and comments in tml-format\n" <<
 				"  templates <filename>        ... load and print templates from tml file\n" <<
+				"  include <filename>          ... load tml file and include all other tml files and print it\n" <<
 				std::endl;
 	}
 
@@ -91,6 +94,34 @@ namespace
 		std::cout << "============================================" << std::endl;
 		return 0;
 	}
+
+	int includeAndPrint(const char* filename, bool inclEmptyLines,
+			bool inclComments, bool forceDeepByStoredDeepValue)
+	{
+		cfg::TmlFileLoader loader;
+		cfg::Value value;
+		std::string outErrorMsg;
+		if (!cfg::inc::loadAndIncludeFiles(value, filename, loader,
+				"include", inclEmptyLines,
+				inclComments, outErrorMsg)) {
+			std::cerr << "parse/includes for " << filename << " failed" << std::endl;
+			std::cerr << "error: " << outErrorMsg << std::endl;
+			return 1;
+		}
+
+#if 0
+		{
+			std::string s = cfg::cfgstring::valueToString(0, value);
+			std::cout << s << std::endl;
+		}
+#endif
+
+		{
+			std::string s = cfg::tmlstring::valueToString(0, value, forceDeepByStoredDeepValue);
+			std::cout << s << std::endl;
+		}
+		return 0;
+	}
 }
 
 int main(int argc, char* argv[])
@@ -148,6 +179,14 @@ int main(int argc, char* argv[])
 			return 1;
 		}
 		return loadAndPrintTemplates(argv[2]);
+	}
+	if (command == "include") {
+		if (argc != 3) {
+			std::cerr << "include command need exactly one argument/filename" << std::endl;
+			printHelp(argv[0]);
+			return 1;
+		}
+		return includeAndPrint(argv[2], true, true, false);
 	}
 	std::cerr << "command '" << command << "' is not supported" << std::endl;
 	printHelp(argv[0]);

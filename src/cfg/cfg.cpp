@@ -41,19 +41,68 @@ namespace cfg
 }
 
 cfg::Value::Value()
-		:mLineNumber(-1), mOffset(-1),
+		:mFilename(),
+		mLineNumber(-1),
+		mOffset(-1),
 		mType(TYPE_NONE),
 		mParseBase(0),
 		mBool(false),
 		mFloatingPoint(0.0f),
 		mInteger(0),
-		mText(""),
+		mText(),
+		mArray(),
 		mObject()
 {
 }
 
-cfg::Value::~Value()
+cfg::Value::Value(Value&& other)
+		:mFilename(std::move(other.mFilename)),
+		mLineNumber(std::move(other.mLineNumber)),
+		mOffset(std::move(other.mOffset)),
+		mType(std::move(other.mType)),
+		mParseBase(std::move(other.mParseBase)),
+		mBool(std::move(other.mBool)),
+		mFloatingPoint(std::move(other.mFloatingPoint)),
+		mInteger(std::move(other.mInteger)),
+		mText(std::move(other.mText)),
+		mArray(std::move(other.mArray)),
+		mObject(std::move(other.mObject))
 {
+	other.mLineNumber = -1;
+	other.mOffset = -1;
+	other.mType = TYPE_NONE;
+	other.mParseBase = 0;
+	other.mBool = false;
+	other.mFloatingPoint = 0.0;
+	other.mInteger = 0;
+}
+
+cfg::Value& cfg::Value::operator=(Value&& other)
+{
+	if (this == &other) {
+		return *this;
+	}
+	mFilename = std::move(other.mFilename);
+	mLineNumber = std::move(other.mLineNumber);
+	mOffset = std::move(other.mOffset);
+	mType = std::move(other.mType);
+	mParseBase = std::move(other.mParseBase);
+	mBool = std::move(other.mBool);
+	mFloatingPoint = std::move(other.mFloatingPoint);
+	mInteger = std::move(other.mInteger);
+	mText = std::move(other.mText);
+	mArray = std::move(other.mArray);
+	mObject = std::move(other.mObject);
+
+	other.mLineNumber = -1;
+	other.mOffset = -1;
+	other.mType = TYPE_NONE;
+	other.mParseBase = 0;
+	other.mBool = false;
+	other.mFloatingPoint = 0.0;
+	other.mInteger = 0;
+
+	return *this;
 }
 
 std::string cfg::Value::getFilePosition() const
@@ -664,12 +713,31 @@ int cfg::Value::objectGet(const SelectRule *rules,
 //-----------------------------------------------
 
 cfg::NameValuePair::NameValuePair()
-	:mDeep(-1)
+	:mName(), mValue(), mDeep(-1)
 {
 }
 
-cfg::NameValuePair::~NameValuePair()
+cfg::NameValuePair::NameValuePair(NameValuePair&& other)
+	:mName(std::move(other.mName)),
+	mValue(std::move(other.mValue)),
+	mDeep(std::move(other.mDeep))
 {
+	other.mDeep = -1;
+}
+
+cfg::NameValuePair& cfg::NameValuePair::operator=(NameValuePair&& other)
+{
+	if (this == &other) {
+		return *this;
+	}
+
+	mName = std::move(other.mName);
+	mValue = std::move(other.mValue);
+	mDeep = std::move(other.mDeep);
+
+	other.mDeep = -1;
+
+	return *this;
 }
 
 void cfg::NameValuePair::clear()
