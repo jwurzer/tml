@@ -71,7 +71,12 @@ TML also supports templates (prefabs) and special name-value pairs. For more det
 
 License
 -------
-TML is dual-licensed in public domain and zlib license.
+TML is dual-licensed under the very permissive [zlib license](LICENSE) and [MIT license](MIT-LICENSE).
+Every source file includes an explicit dual-license for you to choose from.
+Just choose one license of the two that is more suitable for you.
 
-For more information about the licences for TML see the [LICENSE](LICENSE) file.
+This program is free software; you can redistribute it and/or modify
+it under the terms of either zlib license and/or MIT license.
 
+For more information about the licences see the [LICENSE](LICENSE) file for zlib license or 
+[MIT-LICENSE](MIT-LICENSE) for the MIT license.
