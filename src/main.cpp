@@ -25,6 +25,7 @@ namespace
 				"  print-tml-values <filename> ... print the tml file without empty lines and comments in tml-format\n" <<
 				"  templates <filename>        ... load and print templates from tml file\n" <<
 				"  include <filename>          ... load tml file and include all other tml files and print it\n" <<
+				"  include-buf <filename>      ... load tml file and include all other tml files and print it (with file buffering)\n" <<
 				std::endl;
 	}
 
@@ -96,14 +97,15 @@ namespace
 	}
 
 	int includeAndPrint(const char* filename, bool inclEmptyLines,
-			bool inclComments, bool forceDeepByStoredDeepValue)
+			bool inclComments, bool withFileBuffering, bool forceDeepByStoredDeepValue)
 	{
 		cfg::TmlFileLoader loader;
 		cfg::Value value;
 		std::string outErrorMsg;
-		if (!cfg::inc::loadAndIncludeFiles(value, filename, loader,
-				"include", inclEmptyLines,
-				inclComments, outErrorMsg)) {
+		cfg::inc::TFileMap includedFiles;
+		if (!cfg::inc::loadAndIncludeFiles(value, includedFiles, filename, loader,
+				"include", inclEmptyLines, inclComments, withFileBuffering,
+				outErrorMsg)) {
 			std::cerr << "parse/includes for " << filename << " failed" << std::endl;
 			std::cerr << "error: " << outErrorMsg << std::endl;
 			return 1;
@@ -119,6 +121,11 @@ namespace
 		{
 			std::string s = cfg::tmlstring::valueToString(0, value, forceDeepByStoredDeepValue);
 			std::cout << s << std::endl;
+		}
+
+		std::cout << "*** included files: ***" << std::endl;
+		for (const auto& v : includedFiles) {
+			std::cout << v.first << ", count: " << v.second << std::endl;
 		}
 		return 0;
 	}
@@ -180,13 +187,13 @@ int main(int argc, char* argv[])
 		}
 		return loadAndPrintTemplates(argv[2]);
 	}
-	if (command == "include") {
+	if (command == "include" || command == "include-buf") {
 		if (argc != 3) {
 			std::cerr << "include command need exactly one argument/filename" << std::endl;
 			printHelp(argv[0]);
 			return 1;
 		}
-		return includeAndPrint(argv[2], true, true, false);
+		return includeAndPrint(argv[2], true, true, command == "include-buf", false);
 	}
 	std::cerr << "command '" << command << "' is not supported" << std::endl;
 	printHelp(argv[0]);

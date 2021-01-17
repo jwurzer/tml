@@ -9,7 +9,10 @@ namespace cfg
 	class CFG_API FileLoader
 	{
 	public:
-		virtual bool loadAndPush(Value& outValue, const std::string& filename,
+		virtual std::string getFullFilename(const std::string& includeFilename) const = 0;
+		virtual bool loadAndPush(Value& outValue,
+				std::string& outFullFilename,
+				const std::string& includeFilename,
 				bool inclEmptyLines, bool inclComments,
 				std::string& outErrorMsg) = 0;
 		virtual bool pop() = 0;
