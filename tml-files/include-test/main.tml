@@ -11,6 +11,10 @@ include inc2.tml
 
 include sub/sub-inc.tml
 
+include sub////sub-inc.tml
+
+include ./././sub////sub-inc.tml
+
 asdf
 	asdf
 		asdf
