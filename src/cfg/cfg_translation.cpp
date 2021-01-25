@@ -1,6 +1,110 @@
 #include <cfg/cfg_translation.h>
 #include <sstream>
 
+#define MAX_RECURSIVE_DEEP 50
+
+namespace cfg
+{
+namespace cfgtr
+{
+namespace
+{
+	/**
+	 *
+	 * @param translationMap
+	 * @param replaceKeyword
+	 * @param currentRecursiveReplaceDeep Is needed to limit to a max recursive deep.
+	 *        This has nothing to do with the current deep of the
+	 *        "value tree". This deep value is only for the recursive
+	 *        replacement of translations.
+	 * @param cfgValue
+	 * @param outErrorMsg
+	 * @return
+	 */
+	bool applyTranslations(const TranslationMap& translationMap,
+			const std::string& replaceKeyword,
+			int currentRecursiveReplaceDeep,
+			Value& cfgValue,
+			std::string& outErrorMsg)
+	{
+		if (currentRecursiveReplaceDeep > MAX_RECURSIVE_DEEP) {
+			outErrorMsg = cfgValue.getFilenameAndPosition() +
+					": Reach max recursive deep for translation replacement! (deep " +
+					std::to_string(currentRecursiveReplaceDeep) + ")";
+			return false;
+		}
+		if (cfgValue.isText()) {
+			if (cfgValue.mText.size() < 4) {
+				return true;
+			}
+			if (cfgValue.mText.compare(0, replaceKeyword.size(),
+					replaceKeyword) != 0 ||
+					cfgValue.mText.back() != ')') {
+				return true;
+			}
+			std::string translationId = cfgValue.mText.substr(
+					replaceKeyword.size(),
+					cfgValue.mText.length() - (replaceKeyword.size() + 1));
+			const TranslationMap::const_iterator it = translationMap.find(
+					translationId);
+			if (it == translationMap.end()) {
+				outErrorMsg = cfgValue.getFilenameAndPosition() +
+						": Can't find translation id '" + translationId + "'";
+				return false;
+			}
+			// copy the value to replace the translation holder with the correct value.
+			cfgValue = it->second.mValue;
+			// the replaced translation can also have a translations as value
+			// --> call applyTranslations() for the replaced translation
+			if (!applyTranslations(translationMap, replaceKeyword,
+					currentRecursiveReplaceDeep + 1,
+					cfgValue, outErrorMsg)) {
+				return false;
+			}
+			return true;
+		}
+
+		if (cfgValue.isArray()) {
+			for (Value& v : cfgValue.mArray) {
+				// No +1 for currentRecursiveReplaceDeep because its
+				// no new recursive replacement.
+				// Its not a replacement of a replacement.
+				// Don't use 0 for currentRecursiveReplaceDeep to check
+				// indirect recursive replacements.
+				if (!applyTranslations(translationMap, replaceKeyword,
+						currentRecursiveReplaceDeep, v, outErrorMsg)) {
+					return false;
+				}
+			}
+			return true;
+		}
+
+		if (cfgValue.isObject()) {
+			for (NameValuePair& nv : cfgValue.mObject) {
+				// No +1 for currentRecursiveReplaceDeep because its
+				// no new recursive replacement.
+				// Its not a replacement of a replacement.
+				// Don't use 0 for currentRecursiveReplaceDeep to check
+				// indirect recursive replacements.
+				// Now apply the translations for the name and value of each object.
+				if (!applyTranslations(translationMap, replaceKeyword,
+						currentRecursiveReplaceDeep, nv.mName, outErrorMsg)) {
+					return false;
+				}
+				if (!applyTranslations(translationMap, replaceKeyword,
+						currentRecursiveReplaceDeep, nv.mValue, outErrorMsg)) {
+					return false;
+				}
+			}
+			return true;
+		}
+
+		return true;
+	}
+}
+}
+}
+
 bool cfg::cfgtr::addTranslations(LanguageMap& languageMap,
 		Value& cfgValue, bool removeTranslationsFromCfgValue,
 		const std::string& translationsKeyword,
@@ -144,49 +248,6 @@ bool cfg::cfgtr::useTranslations(const TranslationMap& translationMap,
 		const std::string& replaceKeyword, Value& cfgValue,
 		std::string& outErrorMsg)
 {
-	if (cfgValue.isText()) {
-		if (cfgValue.mText.size() < 4) {
-			return true;
-		}
-		if (cfgValue.mText.compare(0, replaceKeyword.size(), replaceKeyword) != 0 ||
-				cfgValue.mText.back() != ')') {
-			return true;
-		}
-		std::string translationId = cfgValue.mText.substr(replaceKeyword.size(),
-				cfgValue.mText.length() - (replaceKeyword.size() + 1));
-		const TranslationMap::const_iterator it = translationMap.find(translationId);
-		if (it == translationMap.end()) {
-			outErrorMsg = cfgValue.getFilenameAndPosition() +
-					": Can't find translation id '" + translationId + "'";
-			return false;
-		}
-		cfgValue = it->second.mValue;
-		return true;
-	}
-
-	if (cfgValue.isArray()) {
-		for (Value& v : cfgValue.mArray) {
-			if (!useTranslations(translationMap, replaceKeyword, v,
-					outErrorMsg)) {
-				return false;
-			}
-		}
-		return true;
-	}
-
-	if (cfgValue.isObject()) {
-		for (NameValuePair& nv : cfgValue.mObject) {
-			if (!useTranslations(translationMap, replaceKeyword, nv.mName,
-					outErrorMsg)) {
-				return false;
-			}
-			if (!useTranslations(translationMap, replaceKeyword, nv.mValue,
-					outErrorMsg)) {
-				return false;
-			}
-		}
-		return true;
-	}
-
-	return true;
+	return applyTranslations(translationMap, replaceKeyword, 0,
+			cfgValue, outErrorMsg);
 }
