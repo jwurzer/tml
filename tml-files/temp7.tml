@@ -1,0 +1,44 @@
+
+template
+	name = SAY-HELLO
+	parameters = NAME
+	Hi I am NAME
+		nickname = true
+	my-name-is = NAME
+template
+	name = DUMMY
+	parameters = AA
+	AA
+		test1
+		hello
+	yesterday
+		test2
+		good bye
+			test = abc
+			x = false
+template
+	name = DUMMY2
+	parameters = AA
+	AA
+		test1
+		hello
+	yesterday
+template
+	name = DUMMY3
+	parameters = AA
+	AA
+		test1
+		hello
+	yesterday = false
+example
+	abc = yes or no
+	a-cool-name = Alice
+	# example 1
+	use-template DUMMY foo
+		use-template SAY-HELLO Max
+	# example 2
+	use-template DUMMY2 foo
+		use-template SAY-HELLO Max
+	# example 3, won't work
+	#use-template DUMMY3 foo
+	#	use-template SAY-HELLO Max

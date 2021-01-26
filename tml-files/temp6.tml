@@ -1,0 +1,12 @@
+
+template
+	name = SAY-HELLO
+	parameters = NAME
+	Hi I am NAME
+dummy-chat
+	use-template SAY-HELLO Alice = true
+	a-text-array = use-template SAY-HELLO Bob
+	use-template SAY-HELLO Lena
+	use-template SAY-HELLO James
+	use-template SAY-HELLO Max
+		use-template SAY-HELLO Ella
