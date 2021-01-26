@@ -255,7 +255,7 @@ namespace cfg
 			 * @param outErrorMsg Error message. In this case false is returned.
 			 * @return Return true for success.
 			 */
-			bool replaceTemplate(const TemplateMap& templateMap, Value& cfgValue,
+			bool replaceSimpleTemplate(const TemplateMap& templateMap, Value& cfgValue,
 					const std::string& keywordForUsingTemplate,
 					int currentRecursiveReplaceDeep,
 					std::vector<std::string>& templateNameStack,
@@ -332,7 +332,7 @@ namespace cfg
 				replaceValueByParameters(parameterMap, cfgValue);
 				if (isUsingTemplate(cfgValue, keywordForUsingTemplate)) {
 					templateNameStack.push_back(tempName);
-					if (!replaceTemplate(templateMap, cfgValue,
+					if (!replaceSimpleTemplate(templateMap, cfgValue,
 							keywordForUsingTemplate,
 							currentRecursiveReplaceDeep + 1,
 							templateNameStack, outErrorMsg)) {
@@ -406,7 +406,8 @@ namespace cfg
 						}
 					}
 					if (isUsingTemplate(nvp->mName, keywordForUsingTemplate)) {
-						if (nvp->mValue.isEmpty()) {
+						if (nvp->mValue.isEmpty() || nvp->mValue.isObject()) {
+							cfg::Value origValue = std::move(nvp->mValue);
 							// full replacment with none, one or more name-value-pairs are allowed
 							int insertCnt = replaceTemplate(templateMap, pairs,
 									i, keywordForUsingTemplate,
@@ -428,10 +429,48 @@ namespace cfg
 							// --> nvp is NOT valid any more
 							// --> reassign nvp to current name value pair
 							nvp = &pairs[i]; // VERY IMPORTANT!!!!!
+
+							if (origValue.isObject()) {
+								if (insertCnt == 0) {
+									outErrorMsg = "Can't add children after an empty template";
+									return false;
+								}
+								int realInsertCnt = insertCnt;
+								// find a valid name-value pair.
+								// A empty name-value pair is not allowed therefore
+								// search the last non-empty name-value pair.
+								NameValuePair* validNvp = &pairs[i];
+								for (int revert = 0;
+										realInsertCnt >= 1 && validNvp->isEmpty();
+										++revert, --realInsertCnt, validNvp = &pairs[i - revert])
+									;
+								if (realInsertCnt <= 0) {
+									outErrorMsg = "Can't add children after an empty template";
+									return false;
+								}
+
+								if (validNvp->isEmptyOrComment() ||
+										validNvp->mName.isEmpty() || validNvp->mName.isComment()) {
+									outErrorMsg = "Can't add children to an empty name or comment";
+									return false;
+								}
+								if (!validNvp->mValue.isEmpty() && !validNvp->mValue.isObject()) {
+									outErrorMsg = "Can't add children. The value from the template's last name value pair must be empty or an object.";
+									return false;
+								}
+								if (!validNvp->isObject()) {
+									// check is necessary because setObject also clear the current content
+									// --> only if no object (or an object with no childrens/entries) then setObject() is ok
+									validNvp->mValue.setObject();
+								}
+								validNvp->mValue.mObject.insert(validNvp->mValue.mObject.end(),
+										std::make_move_iterator(origValue.mObject.begin()),
+										std::make_move_iterator(origValue.mObject.end()));
+							}
 						}
 						else {
 							// only a simple replacement is allowed
-							if (!replaceTemplate(templateMap, nvp->mName,
+							if (!replaceSimpleTemplate(templateMap, nvp->mName,
 									keywordForUsingTemplate,
 									currentRecursiveReplaceDeep,
 									templateNameStack, outErrorMsg)) {
@@ -446,7 +485,7 @@ namespace cfg
 					}
 					if (isUsingTemplate(nvp->mValue, keywordForUsingTemplate)) {
 						// only a simple replacement is allowed
-						if (!replaceTemplate(templateMap, nvp->mValue,
+						if (!replaceSimpleTemplate(templateMap, nvp->mValue,
 								keywordForUsingTemplate,
 								currentRecursiveReplaceDeep,
 								templateNameStack, outErrorMsg)) {

@@ -1,0 +1,49 @@
+
+template
+	name = COLOR
+	parameters = RED GREEN BLUE ALPHA
+	alpha-for-fill = ALPHA
+	color = RED GREEN BLUE
+
+template
+	name = TEST
+	parameters = AA BB
+	xy = AA BB
+
+template
+	name = TEST3
+	parameters = AA
+	AA
+		test1
+		xy
+	AA AA
+		test2
+		jo
+	AA AA AA
+		test3
+		yes
+template
+	name = TEST2
+	parameters = AA
+	AA AA AA
+
+game-object
+	use-template COLOR 1.0 0.5 0.0 1.0
+	game-object
+		use-template COLOR 1.0 0.5 0.0 1.0
+	use-template TEST2 aaa = hallo
+	xyz = use-template TEST2 yeah
+	#xyz = use-template TEST3 yeah
+	use-template TEST2 yeah = use-template TEST2 yeah
+	use-template TEST3 yeah
+		asdf asdf
+		use-template TEST3 yeah
+		asjdfkl alsdf lkas dflk
+		asdj flkal sdkf lkadsf
+		use-template TEST3 yeah
+			use-template TEST3 yeah
+				use-template TEST3 yeah
+		use-template TEST2 yeah
+			use-template TEST2 yeah
+				use-template TEST2 yeah
+					use-template TEST2 yeah
