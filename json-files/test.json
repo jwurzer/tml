@@ -1,0 +1,25 @@
+{
+  "name": "Alice",
+  "isFemale": true,
+  "age": 29,
+  "address": {
+    "street": "Muellergasse 7",
+    "city": "Vienna",
+    "state": "AT",
+    "code": "1001"
+  },
+  "empty object": {
+  },
+  "telephones": [
+    {
+      "type": "private",
+      "number": "123/3423"
+    },
+    {
+      "type": "work",
+      "number": "34234/7899"
+    }
+  ],
+  "hobbies": [],
+  "foo": null
+}
