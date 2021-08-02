@@ -72,7 +72,7 @@ TML also supports templates (prefabs) and special name-value pairs. For more det
 License
 -------
 TML is dual-licensed under the very permissive [zlib license](LICENSE) and [MIT license](MIT-LICENSE).
-Every source file includes an explicit dual-license for you to choose from.
+Every source file (excepted include/json/jsmn.h) includes an explicit dual-license for you to choose from.
 Just choose one license of the two that is more suitable for you.
 
 This program is free software; you can redistribute it and/or modify
@@ -80,3 +80,6 @@ it under the terms of either zlib license and/or MIT license.
 
 For more information about the licences see the [LICENSE](LICENSE) file for zlib license or 
 [MIT-LICENSE](MIT-LICENSE) for the MIT license.
+
+The file include/json/jsmn.h is only under the MIT license.
+It's from the external project https://github.com/zserge/jsmn
