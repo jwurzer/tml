@@ -57,6 +57,7 @@ namespace cfg
 					//printf("'%.*s'", t->end - t->start, js + t->start);
 					std::string text;
 					text.insert(text.end(), js + t->start, js + t->end);
+					// TODO: check if escape sequences are used!
 					val.setText(text);
 					return 1;
 				}
