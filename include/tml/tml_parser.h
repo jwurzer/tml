@@ -50,10 +50,10 @@ namespace cfg
 	};
 }
 
-#endif /* GLSLSCENE_SML_PARSER_H */
+#endif
 
 /*
- * SML - Smart Markup Language
+ * TML - Tiny Markup Language
  *
  * The first indent defines the indent character and the count of this character.
  * The indent can be one or more tabs or one or more spaces.
