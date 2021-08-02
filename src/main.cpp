@@ -5,6 +5,7 @@
 #include <cfg/cfg_include.h>
 #include <tml/tml_string.h>
 #include <tml/tml_file_loader.h>
+#include <json/json_parser.h>
 
 #include <string>
 #include <iostream>
@@ -26,6 +27,8 @@ namespace
 				"  templates <filename>        ... load and print templates from tml file\n" <<
 				"  include <filename>          ... load tml file and include all other tml files and print it\n" <<
 				"  include-buf <filename>      ... load tml file and include all other tml files and print it (with file buffering)\n" <<
+				"  printjson <filename>        ... print the json file\n" <<
+				"  printjson2tml <filename>    ... print the json file as tml\n" <<
 				std::endl;
 	}
 
@@ -129,6 +132,35 @@ namespace
 		}
 		return 0;
 	}
+
+	int printJson(const char* filename)
+	{
+		cfg::JsonParser p(filename);
+		cfg::NameValuePair cvp;
+		if (!p.getAsTree(cvp)) {
+			std::cerr << "parse " << filename << " failed" << std::endl;
+			std::cerr << "error: " << p.getExtendedErrorMsg() << std::endl;
+			return 1;
+		}
+		std::string s = cfg::cfgstring::nameValuePairToString(0, cvp);
+		std::cout << s << std::endl;
+		return 0;
+	}
+
+	int printJsonToTml(const char* filename)
+	{
+		cfg::JsonParser p(filename);
+		cfg::NameValuePair cvp;
+		if (!p.getAsTree(cvp)) {
+			std::cerr << "parse " << filename << " failed" << std::endl;
+			std::cerr << "error: " << p.getExtendedErrorMsg() << std::endl;
+			return 1;
+		}
+		std::string s = cfg::tmlstring::valueToString(0, cvp.mValue);
+		std::cout << s << std::endl;
+		return 0;
+	}
+
 }
 
 int main(int argc, char* argv[])
@@ -194,6 +226,22 @@ int main(int argc, char* argv[])
 			return 1;
 		}
 		return includeAndPrint(argv[2], true, true, command == "include-buf", false);
+	}
+	if (command == "printjson") {
+		if (argc != 3) {
+			std::cerr << "printjson command need exactly one argument/filename" << std::endl;
+			printHelp(argv[0]);
+			return 1;
+		}
+		return printJson(argv[2]);
+	}
+	if (command == "printjson2tml") {
+		if (argc != 3) {
+			std::cerr << "printjson2tml command need exactly one argument/filename" << std::endl;
+			printHelp(argv[0]);
+			return 1;
+		}
+		return printJsonToTml(argv[2]);
 	}
 	std::cerr << "command '" << command << "' is not supported" << std::endl;
 	printHelp(argv[0]);
