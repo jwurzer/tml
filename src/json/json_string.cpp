@@ -84,6 +84,10 @@ namespace cfg
 			ss << "\"";
 		}
 
+		/**
+		 * Only a simple value, an EMPTY array or an EMPTY object is allowed.
+		 * An array with elements or an object with name value pairs is NOT allowed!
+		 */
 		void addSimpleValueToStringStream(const Value& cfgValue,
 				std::stringstream& ss)
 		{
@@ -103,6 +107,20 @@ namespace cfg
 				case Value::TYPE_TEXT:
 					addTextForJson(ss, cfgValue.mText);
 					break;
+				case Value::TYPE_ARRAY:
+					if (cfgValue.isArray() && cfgValue.mArray.empty()) {
+						ss << "[]";
+						break;
+					}
+					ss << "ARRAY-ERROR";
+					break;
+				case Value::TYPE_OBJECT:
+					if (cfgValue.isObject() && cfgValue.mObject.empty()) {
+						ss << "{}";
+						break;
+					}
+					ss << "OBJECT-ERROR";
+					break;
 				default:
 					ss << "ERROR";
 					break;
@@ -118,9 +136,15 @@ namespace cfg
 			}
 			if (cfgValue.isArray()) {
 				std::size_t cnt = cfgValue.mArray.size();
+				// for a "full array is simple" only these three values are allowed:
+				// * a simple value
+				// * a value which is an array with no elements (empty array)
+				// * a value which is an object with no name value pairs (empty object)
 				bool fullArrayIsSimple = true;
 				for (std::size_t i = 0; i < cnt; ++i) {
-					if (!cfgValue.mArray[i].isSimple()) {
+					if (!cfgValue.mArray[i].isSimple() &&
+							!(cfgValue.mArray[i].isArray() && cfgValue.mArray[i].mArray.empty()) &&
+							!(cfgValue.mArray[i].isObject() && cfgValue.mArray[i].mObject.empty())) {
 						fullArrayIsSimple = false;
 						break;
 					}
@@ -144,7 +168,9 @@ namespace cfg
 							addSimpleValueToStringStream(cfgValue.mArray[i], ss);
 						}
 						else {
-							::cfg::jsonstring::valueToStringStream(deep + 1, cfgValue.mArray[i], ss, indentMode);
+							::cfg::jsonstring::valueToStringStream(deep + 1,
+									cfgValue.mArray[i], ss, indentMode,
+									false, false);
 						}
 						if (i + 1 < cnt) {
 							ss << ",";
