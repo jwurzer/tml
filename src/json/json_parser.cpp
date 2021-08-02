@@ -11,6 +11,116 @@ namespace cfg
 {
 	namespace
 	{
+		// u8_wc_toutf8 is from
+		// https://www.cprogramming.com/tutorial/utf8.c
+		// by Jeff Bezanson
+		// license is public domain
+		int u8_wc_toutf8(char *dest, uint32_t ch)
+		{
+			if (ch < 0x80) {
+				dest[0] = (char)ch;
+				return 1;
+			}
+			if (ch < 0x800) {
+				dest[0] = (ch>>6) | 0xC0;
+				dest[1] = (ch & 0x3F) | 0x80;
+				return 2;
+			}
+			if (ch < 0x10000) {
+				dest[0] = (ch>>12) | 0xE0;
+				dest[1] = ((ch>>6) & 0x3F) | 0x80;
+				dest[2] = (ch & 0x3F) | 0x80;
+				return 3;
+			}
+			if (ch < 0x110000) {
+				dest[0] = (ch>>18) | 0xF0;
+				dest[1] = ((ch>>12) & 0x3F) | 0x80;
+				dest[2] = ((ch>>6) & 0x3F) | 0x80;
+				dest[3] = (ch & 0x3F) | 0x80;
+				return 4;
+			}
+			return 0;
+		}
+
+		/**
+		 * Convert a string with escape sequences.
+		 * Supported escape sequences are \" \\ \/ \b \f \n \r \t \uXXXX
+		 * If \uXXXX is included it will be converted to utf-8.
+		 * @param escapedSeqText String which is allowed to contains escape
+		 *        sequences.
+		 * @return String with converted escape sequences.
+		 */
+		std::string convertEscapeSequences(const std::string& escapedSeqText)
+		{
+			std::string text;
+			text.reserve(escapedSeqText.size());
+			std::size_t len = escapedSeqText.length();
+			for (std::size_t i = 0; i < len; ++i) {
+				char ch = escapedSeqText[i];
+				if (ch == '\\') {
+					// --> escape sequence
+					++i;
+					if (i >= len) {
+						// if it is a correct escape sequence then this should not happend
+						return text;
+					}
+					ch = escapedSeqText[i];
+					switch (ch) {
+						case '"':
+						case '\\':
+						case '/':
+							text += ch;
+							break;
+						case 'b':
+							text += '\b';
+							break;
+						case 'f':
+							text += '\f';
+							break;
+						case 'n':
+							text += '\n';
+							break;
+						case 'r':
+							text += '\r';
+							break;
+						case 't':
+							text += '\t';
+							break;
+						case 'u': {
+							if (i + 4 >= len) {
+								// if it is a correct escape sequence for unicode
+								// with \uXXXX then this should not happend
+								return text;
+							}
+							char hexStr[5] = {
+									escapedSeqText[i + 1],
+									escapedSeqText[i + 2],
+									escapedSeqText[i + 3],
+									escapedSeqText[i + 4],
+									'\0'};
+							if (isxdigit(hexStr[0]) && isxdigit(hexStr[1]) &&
+									isxdigit(hexStr[2]) && isxdigit(hexStr[3])) {
+								long unicode = strtol(hexStr, nullptr, 16);
+								char dest[5];
+								int cnt = u8_wc_toutf8(dest, unicode);
+								dest[cnt] = '\0';
+								text += dest;
+							}
+							i += 4;
+							break;
+						}
+						default:
+							// wrong escape sequence --> ignore it
+							break;
+					}
+				}
+				else {
+					text += ch;
+				}
+			}
+			return text;
+		}
+
 		/**
 		 * Dump the token t and its children into value val.
 		 * @return Count of dumped values/tokens.
@@ -57,8 +167,7 @@ namespace cfg
 					//printf("'%.*s'", t->end - t->start, js + t->start);
 					std::string text;
 					text.insert(text.end(), js + t->start, js + t->end);
-					// TODO: check if escape sequences are used!
-					val.setText(text);
+					val.setText(convertEscapeSequences(text));
 					return 1;
 				}
 				case JSMN_PRIMITIVE: {

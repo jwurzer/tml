@@ -50,17 +50,31 @@ namespace cfg
 			for (std::size_t i = 0; i < len; ++i) {
 				char ch = text[i];
 				switch (ch) {
-					case '\t':
-						ss << "\\t";
-						break;
-					case '\n':
-						ss << "\\n";
+					case '"':
+						ss << "\\\"";
 						break;
 					case '\\':
 						ss << "\\\\";
 						break;
-					case '"':
-						ss << "\\\"";
+#if 0 // escape the slash '/' is not necessary (but allowed) --> don't escape it
+					case '/':
+						ss << "\\/";
+						break;
+#endif
+					case '\b':
+						ss << "\\b";
+						break;
+					case '\f':
+						ss << "\\f";
+						break;
+					case '\n':
+						ss << "\\n";
+						break;
+					case '\r':
+						ss << "\\r";
+						break;
+					case '\t':
+						ss << "\\t";
 						break;
 					default:
 						ss << ch;
