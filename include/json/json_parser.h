@@ -23,6 +23,10 @@ namespace cfg
 	 * Date: Thu Apr 2 2020
 	 * If no API changes happened then the file jsmn.h could be replaced
 	 * with the current available version.
+	 *
+	 * For JSON standard see:
+	 * https://www.ecma-international.org/publications-and-standards/standards/ecma-404/
+	 * https://www.ecma-international.org/wp-content/uploads/ECMA-404_2nd_edition_december_2017.pdf
 	 */
 	class CFG_API JsonParser
 	{
