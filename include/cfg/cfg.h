@@ -48,6 +48,11 @@ namespace cfg
 		int mLineNumber;
 		// -1 for no offset. offset is the horizontal offset at the text line from file
 		int mOffset;
+		// -1 for no deep. deep (indent count) of the line.
+		// e.g. '[tab][tab]abc = xyz' has a deep of 2 for both the name abc and the value xyz.
+		// Nvp means name-value-paar and should be a hint that's the deep of the line
+		// and not the deep of the beginning from the real value (which could be the same but must not).
+		int mNvpDeep;
 
 		/**
 		 * if mType is TYPE_FLOAT then the float value is stored at mFloatingPoint

@@ -1,0 +1,15 @@
+#test = [] b c
+#test = {} b c
+#{} as text is no problem ;-)
+test = "{}" b c
+#test = a [] c
+#test = a {} c
+#test = a b []
+#test = a b {}
+#test = [] a s {}
+#test = {} a s []
+
+# not allowed because an empty object as name is not allowed
+#{} = []
+# not allowed because an empty array as name is not allowed
+#[] = {}

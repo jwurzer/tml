@@ -1,0 +1,120 @@
+
+# a empty object
+a-empty-obj = {}
+
+# a empty array
+empty-array = []
+
+# a array which defines its elements not in a single row.
+# instead it uses multiple rows
+array-by-multiple-rows = []
+	entry1
+	asdf
+	next-entry
+	a sub-array as entry
+	true
+	null
+	"text with spaces"
+	#object as array element
+	{}
+		foo = 123
+		active = true
+		id = asdf
+	#a sub-array by multiple lines
+	[]
+		first-entry-of-subarray
+		next-entry
+		# a empty object
+		{}
+		123
+
+
+array-with-multiple-lines = []
+	""
+	asdf
+	0
+	1
+	# asdf
+	2
+	3
+
+	4
+	4.5
+	-4.5
+	+5.3
+	uio
+	null
+	true
+	false
+
+
+1 2 3 4 5
+
+asdf = 1 2 3 4 5
+
+1 2 3 4 5 = 1 2 3 4 5
+
+# this is not possible. would be a object with an empty array as name which is not allowed
+#[]
+#	1
+#	2
+#	3
+#	4
+#	5
+
+asdf = []
+	1
+	2
+	3
+	4
+	5
+
+1 2 3 4 5 = []
+	1
+	2
+	3
+	4
+	5
+
+asdf = []
+	[]
+		1
+		2
+		3
+	[]
+		1
+		2
+		3
+	[]
+		1
+		2
+		3
+	[]
+		1
+		2
+		3
+	[]
+		1
+		2
+		3
+
+#####################
+#what is not allowed:
+#####################
+
+# not allowed:
+#abc = a b {} d
+# only possible with:
+abc = []
+	a
+	b
+	{}
+	d
+# not allowed:
+#abc = a b [] d
+# only possible with:
+abc = []
+	a
+	b
+	[]
+	d

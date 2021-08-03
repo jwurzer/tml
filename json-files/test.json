@@ -22,9 +22,9 @@
   ],
   "hobbies0": ["running", "football", "soccer"],
   "hobbies1": ["running", "football", "soccer", [], {}, [1, 2, "three"], ["a", "b", "c"]],
-  "empty object": {
+  "special-test-object": {
     "id": "asdf",
-    "hobbies1": ["running", "football", "soccer", [], {}, [1, 2, "three"], ["a", "b", "c", {"asdf": "abc", "vec": [1, 2, 3], "vec2": [4, 5, 6, {}, []], "vec3": [7, 8, 9, [[]]]}, "e"]]
+    "hobbies1": ["running", "football", "soccer", [], {}, [1, 2, "three"], ["a", "b", "c", {"asdf": "abc", "vec": [1, 2, 3], "vec2": [4, 5, 6, {}, [], []], "vec3": [7, 8, 9, [[]], []]}, "e"]]
   },
   "hobbies": [],
   "foo": null

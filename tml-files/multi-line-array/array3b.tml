@@ -1,0 +1,27 @@
+# a empty object
+a-empty-obj = {}
+
+# a empty array
+empty-array = []
+
+# a array which defines its elements not in a single row.
+# instead it uses multiple rows
+array-by-multiple-rows = []
+	entry1
+	a sub-array as entry
+	true
+	null
+	"text with spaces"
+	# a comment
+	{}
+		foo = 123
+		active = true
+		id = asdf
+	#a sub-array by multiple lines
+	[]
+		first-entry-of-subarray
+		next-entry
+		# a empty object
+		{}
+		123
+

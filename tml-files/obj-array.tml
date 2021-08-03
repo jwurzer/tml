@@ -1,54 +1,18 @@
 
-obj-array
-	obj1
+obj-array = []
+	{}
 		asdf = 234
 		asdf1 = 3
 		asdf2 = 7
-	obj1
+	{}
 		asdf = 234
 		asdf1 = 3
 		asdf2 = 7
-	obj1
+	{}
 		asdf = 234
 		asdf1 = 3
 		asdf2 = 7
-	obj1
-		asdf = 234
-		asdf1 = 3
-		asdf2 = 7
-
-obj-array
-	!
-		asdf = 234
-		asdf1 = 3
-		asdf2 = 7
-	!
-		asdf = 234
-		asdf1 = 3
-		asdf2 = 7
-	!
-		asdf = 234
-		asdf1 = 3
-		asdf2 = 7
-	!
-		asdf = 234
-		asdf1 = 3
-		asdf2 = 7
-
-obj-array
-	,
-		asdf = 234
-		asdf1 = 3
-		asdf2 = 7
-	,
-		asdf = 234
-		asdf1 = 3
-		asdf2 = 7
-	,
-		asdf = 234
-		asdf1 = 3
-		asdf2 = 7
-	,
+	{}
 		asdf = 234
 		asdf1 = 3
 		asdf2 = 7

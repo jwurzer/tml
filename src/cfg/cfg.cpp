@@ -44,6 +44,7 @@ cfg::Value::Value()
 		:mFilename(),
 		mLineNumber(-1),
 		mOffset(-1),
+		mNvpDeep(-1),
 		mType(TYPE_NONE),
 		mParseBase(0),
 		mBool(false),
@@ -59,6 +60,7 @@ cfg::Value::Value(Value&& other)
 		:mFilename(std::move(other.mFilename)),
 		mLineNumber(std::move(other.mLineNumber)),
 		mOffset(std::move(other.mOffset)),
+		mNvpDeep(std::move(other.mNvpDeep)),
 		mType(std::move(other.mType)),
 		mParseBase(std::move(other.mParseBase)),
 		mBool(std::move(other.mBool)),
@@ -70,6 +72,7 @@ cfg::Value::Value(Value&& other)
 {
 	other.mLineNumber = -1;
 	other.mOffset = -1;
+	other.mNvpDeep = -1;
 	other.mType = TYPE_NONE;
 	other.mParseBase = 0;
 	other.mBool = false;
@@ -85,6 +88,7 @@ cfg::Value& cfg::Value::operator=(Value&& other)
 	mFilename = std::move(other.mFilename);
 	mLineNumber = std::move(other.mLineNumber);
 	mOffset = std::move(other.mOffset);
+	mNvpDeep = std::move(other.mNvpDeep);
 	mType = std::move(other.mType);
 	mParseBase = std::move(other.mParseBase);
 	mBool = std::move(other.mBool);
@@ -96,6 +100,7 @@ cfg::Value& cfg::Value::operator=(Value&& other)
 
 	other.mLineNumber = -1;
 	other.mOffset = -1;
+	other.mNvpDeep = -1;
 	other.mType = TYPE_NONE;
 	other.mParseBase = 0;
 	other.mBool = false;
@@ -133,6 +138,7 @@ void cfg::Value::clear()
 {
 	mLineNumber = -1;
 	mOffset = -1;
+	mNvpDeep = -1;
 
 	mType = TYPE_NONE;
 	mParseBase = 0;

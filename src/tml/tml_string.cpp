@@ -147,8 +147,19 @@ namespace cfg
 									forceDeepByStoredDeepValue, storedDeep);
 						}
 						else {
-							addTab(ss, deep + 1);
-							addValueToStringStream(deep + 1, cfgValue.mArray[i], ss);
+							if (cfgValue.mArray[i].isEmpty()) {
+								// --> only a empty line --> nothing to to (excepted the line break at the end)
+								// TODO: maybe correct indentation of original file???
+							}
+							else if (cfgValue.mArray[i].isComment()) {
+								addTab(ss, deep + 1);
+								ss << "#" << cfgValue.mArray[i].mText << "\n";
+								// TODO: maybe correct indentation of original file???
+							}
+							else {
+								addTab(ss, deep + 1);
+								addValueToStringStream(deep + 1, cfgValue.mArray[i], ss);
+							}
 							if (i + 1 < cnt) {
 								ss << "\n";
 							}

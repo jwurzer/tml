@@ -1,0 +1,60 @@
+name = Alice
+isFemale = true
+age = 29
+address
+	street = "Muellergasse 7"
+	city = Vienna
+	state = AT
+	code = 1001
+"empty object" = {}
+telephones = []
+	{}
+		type = private
+		number = 123/3423
+	{}
+		type = work
+		number = 34234/7899
+
+hobbies0 = running football soccer
+hobbies1 = []
+	running
+	football
+	soccer
+	[]
+	{}
+	1 2 three
+	a b c
+special-test-object
+	id = asdf
+	hobbies1 = []
+		running
+		football
+		soccer
+		[]
+		{}
+		1 2 three
+		[]
+			a
+			b
+			c
+			{}
+				asdf = abc
+				vec = 1 2 3
+				vec2 = []
+					4
+					5
+					6
+					{}
+					[]
+					[]
+				vec3 = []
+					7
+					8
+					9
+					[]
+						[]
+					[]
+			e
+hobbies = []
+foo = null
+

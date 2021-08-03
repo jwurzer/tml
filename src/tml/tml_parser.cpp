@@ -2,7 +2,6 @@
 #include <cfg/cfg.h>
 #include <string.h>
 #include <stdlib.h>
-//#include <iostream> // only for testing
 
 cfg::TmlParser::TmlParser()
 		:mFilename(), mIfs(), mLine(), mErrorCode(0), mErrorMsg(),
@@ -143,7 +142,9 @@ int cfg::TmlParser::getNextTmlEntry(std::string& utf8Line, NameValuePair& entry,
 	if (i >= len) {
 		// a empty line with or without indention
 		entry.mName.mOffset = i;
+		entry.mName.mNvpDeep = deep;
 		entry.mValue.mOffset = i;
+		entry.mValue.mNvpDeep = deep;
 		entry.mDeep = deep;
 		return deep;
 	}
@@ -160,7 +161,9 @@ int cfg::TmlParser::getNextTmlEntry(std::string& utf8Line, NameValuePair& entry,
 		entry.mName.setComment(utf8Line.c_str() + i + 1);
 		entry.mName.mLineNumber = lineNumber;
 		entry.mName.mOffset = i + 1;
+		entry.mName.mNvpDeep = deep;
 		entry.mValue.mOffset = len;
+		entry.mValue.mNvpDeep = deep;
 		entry.mDeep = deep;
 		return deep;
 	}
@@ -366,6 +369,8 @@ int cfg::TmlParser::getNextTmlEntry(std::string& utf8Line, NameValuePair& entry,
 			;
 	}
 	//std::cout << "deep: " << deep << ", line: " << utf8Line << std::endl;
+	entry.mName.mNvpDeep = deep;
+	entry.mValue.mNvpDeep = deep; // also set if valueCount is 0 --> no value/empty value also stores the deep!
 	entry.mDeep = deep;
 	if (valueCount == 1) {
 		entry.mValue.mOffset = i + 1;
@@ -407,14 +412,40 @@ bool cfg::TmlParser::getAsTree(Value &root,
 	stack.push_back(&root);
 	int deep = 0;
 	int prevDeep = 0;
+	/**
+	 * Counts the empty lines and comments at the beginning of a new object/section
+	 * or at the beginning of a multiple line array.
+	 * Why is this important?
+	 * TML Example:
+	 * 1: entry1
+	 * 2: entry2
+	 * 3:     # this is a comment and a empty line is followed
+	 * 4:
+	 * 5:     sub-entry1
+	 * 6: entry3
+	 * The comment and empty line must be children of entry2!
+	 * But this is not really simple because the count of indention steps of
+	 * the comment and the empty line can be any value (is allowed).
+	 * Only sub-entry1 defines thats the comment and empty line are
+	 * children of entry2. If sub-entry1 doesn't exist then the comment
+	 * and empty line must be included into the root object between entry2
+	 * and entry3.
+	 * For this there is a extra logic which moves the comments and empty lines
+	 * to the correct object (or array). For this std::vector<Value> tmp; is used.
+	 */
 	unsigned int currentContiguousEmptyOrCommentCount = 0;
 
+	/**
+	 * A parsed line as name-value-pair can be added
+	 * into an object or
+	 * into a multiple line array (In this case the value of the name-value-pair must be empty).
+	 */
 	while ((deep = getNextTmlEntry(cfgPair)) >= 0) {
 
 		if (!cfgPair.isEmptyOrComment()) {
 			if (deep > prevDeep) {
 #if 1
-				// should not be possible
+				// should not be possible because of above: if (!cfgPair.isEmptyOrComment()) {...
 				if (cfgPair.isEmpty()) {
 					mErrorMsg = "Increase the deep with an empty line is not allowed.";
 					root.clear();
@@ -426,66 +457,186 @@ bool cfg::TmlParser::getAsTree(Value &root,
 					root.clear();
 					return false;
 				}
-				if (stack.back()->mObject.empty()) {
+				if (stack.back()->mObject.empty() && stack.back()->mArray.empty()) {
 					mErrorMsg = "No parent entry exist (should not be possible).";
 					root.clear();
 					return false;
 				}
 
-				std::vector<NameValuePair> tmp;
-
+				std::vector<Value> tmp;
 				int lineNumber = mLineNumber;
+				bool childIsArrayEntry = false;
 
-				if (currentContiguousEmptyOrCommentCount > 0) {
-					std::vector<NameValuePair>& obj = stack.back()->mObject;
-					if (obj.size() <= currentContiguousEmptyOrCommentCount) {
-						mErrorMsg = "No parent exist without empty lines or comments.";
+				if (stack.back()->isObject() && !stack.back()->mObject.empty()) {
+					// --> parent is an object
+
+					if (currentContiguousEmptyOrCommentCount > 0) {
+						std::vector<NameValuePair>& obj = stack.back()->mObject;
+						if (obj.size() <= currentContiguousEmptyOrCommentCount) {
+							mErrorMsg = "No parent exist without empty lines or comments.";
+							root.clear();
+							return false;
+						}
+
+						tmp.reserve(currentContiguousEmptyOrCommentCount);
+						unsigned int startIndex = obj.size() -
+								currentContiguousEmptyOrCommentCount;
+						for (unsigned int i = 0;
+								i < currentContiguousEmptyOrCommentCount; ++i) {
+							tmp.push_back(obj[startIndex + i].mName);
+						}
+						if (obj[startIndex].mName.mLineNumber >= 0) {
+							lineNumber = obj[startIndex].mName.mLineNumber;
+						}
+						obj.resize(startIndex); // truncate --> drop the moved entries
+					}
+
+					// check again after move
+					if (stack.back()->mObject.empty()) {
+						mErrorMsg = "No parent entry exist after moved entries (should not be possible).";
 						root.clear();
 						return false;
 					}
 
-					tmp.reserve(currentContiguousEmptyOrCommentCount);
-					unsigned int startIndex = obj.size() - currentContiguousEmptyOrCommentCount;
-					for (unsigned int i = 0; i < currentContiguousEmptyOrCommentCount; ++i) {
-						tmp.push_back(obj[startIndex + i]);
+					if (stack.back()->mObject.back().mName.isEmpty()) {
+						mErrorMsg = "The name of the parent is empty.";
+						root.clear();
+						return false;
 					}
-					if (obj[startIndex].mName.mLineNumber >= 0) {
-						lineNumber = obj[startIndex].mName.mLineNumber;
+					if (stack.back()->mObject.back().mName.isComment()) {
+						mErrorMsg = "The name of the parent is a comment which is not allowed.";
+						root.clear();
+						return false;
 					}
-					obj.resize(startIndex); // truncate --> drop the moved entries
-				}
+					if (stack.back()->mObject.back().mName.isArray() &&
+							stack.back()->mObject.back().mName.mArray.empty()) {
+						mErrorMsg = "The name of the parent is an empty array which is not allowed.";
+						root.clear();
+						return false;
+					}
+					if (stack.back()->mObject.back().mName.isObject() &&
+							stack.back()->mObject.back().mName.mObject.empty()) {
+						mErrorMsg = "The name of the parent is an empty object which is not allowed.";
+						root.clear();
+						return false;
+					}
 
-				// check again after move
-				if (stack.back()->mObject.empty()) {
-					mErrorMsg = "No parent entry exist after moved entries (should not be possible).";
+					if (stack.back()->mObject.back().mValue.isArray()) {
+						if (!stack.back()->mObject.back().mValue.mArray.empty()) {
+							mErrorMsg = "The value of the parent is a non empty array. Only = [] is allowed for an array with multiple lines.";
+							root.clear();
+							return false;
+						}
+						// --> an empty array --> array with multiple lines
+						childIsArrayEntry = true;
+						stack.back()->mObject.back().mValue.clear();
+					}
+					else if (!stack.back()->mObject.back().mValue.isEmpty()) {
+						// --> not an empty array but also not empty --> not allowed
+						mErrorMsg = "The value of the parent is not empty (no = is allowed at parent, excepted = []).";
+						root.clear();
+						return false;
+					}
+
+					stack.push_back(&stack.back()->mObject.back().mValue);
+				}
+				else if (stack.back()->isArray() && !stack.back()->mArray.empty()) {
+					// --> parent is an array
+
+					if (currentContiguousEmptyOrCommentCount > 0) {
+						std::vector<Value>& array = stack.back()->mArray;
+						if (array.size() <= currentContiguousEmptyOrCommentCount) {
+							mErrorMsg = "No parent exist without empty lines or comments.";
+							root.clear();
+							return false;
+						}
+
+						tmp.reserve(currentContiguousEmptyOrCommentCount);
+						unsigned int startIndex = array.size() -
+								currentContiguousEmptyOrCommentCount;
+						for (unsigned int i = 0;
+								i < currentContiguousEmptyOrCommentCount; ++i) {
+							tmp.push_back(array[startIndex + i]);
+						}
+						if (array[startIndex].mLineNumber >= 0) {
+							lineNumber = array[startIndex].mLineNumber;
+						}
+						array.resize(startIndex); // truncate --> drop the moved entries
+					}
+
+					// check again after move
+					if (stack.back()->mArray.empty()) {
+						mErrorMsg = "No parent entry exist after moved entries (should not be possible).";
+						root.clear();
+						return false;
+					}
+
+					if (stack.back()->mArray.back().isEmpty()) {
+						mErrorMsg = "Parent is empty.";
+						root.clear();
+						return false;
+					}
+					if (stack.back()->mArray.back().isComment()) {
+						mErrorMsg = "The parent is a comment which is not allowed.";
+						root.clear();
+						return false;
+					}
+
+					// only an empty object or an empty array as child is here allowed!
+					if (stack.back()->mArray.back().isArray()) {
+						if (!stack.back()->mArray.back().mArray.empty()) {
+							mErrorMsg = "The parent must be an empty array with [].";
+							root.clear();
+							return false;
+						}
+						childIsArrayEntry = true;
+					}
+					else if (stack.back()->mArray.back().isObject()) {
+						if (!stack.back()->mArray.back().mObject.empty()) {
+							mErrorMsg = "The parent must be an empty object with {}.";
+							root.clear();
+							return false;
+						}
+					}
+					else {
+						mErrorMsg = "The parent must be use [] or {} to add a child to an array.";
+						root.clear();
+						return false;
+					}
+					// --> now can only be an empty object or an empty array
+
+					stack.push_back(&stack.back()->mArray.back());
+				}
+				else {
+					mErrorMsg = "No parent entry exist (should not be possible, again).";
 					root.clear();
 					return false;
 				}
 
-				if (stack.back()->mObject.back().mName.isEmpty()) {
-					mErrorMsg = "The name of the parent is empty.";
-					root.clear();
-					return false;
+				if (childIsArrayEntry) {
+					stack.back()->setArray();
 				}
-				if (stack.back()->mObject.back().mName.isComment()) {
-					mErrorMsg = "The name of the parent is a comment which is not allowed.";
-					root.clear();
-					return false;
+				else {
+					stack.back()->setObject();
 				}
-				if (!stack.back()->mObject.back().mValue.isEmpty()) {
-					mErrorMsg = "The value of the parent is not empty (no = is allowed at parent).";
-					root.clear();
-					return false;
-				}
-
-
-				stack.push_back(&stack.back()->mObject.back().mValue);
-				stack.back()->setObject();
 				stack.back()->mLineNumber = lineNumber;
 				stack.back()->mOffset = deep * mIndentCharCount;
 				if (!tmp.empty()) {
 					// copy is no problem because the new object is empty
-					stack.back()->mObject = std::move(tmp);
+					//std::cout << "move tmp with " << tmp.size() << " entries." << std::endl; // only for info
+					if (childIsArrayEntry) {
+						stack.back()->mArray = std::move(tmp);
+					}
+					else {
+						std::size_t tmpSize = tmp.size();
+						for (std::size_t i = 0; i < tmpSize; ++i) {
+							NameValuePair nvp;
+							nvp.mName = std::move(tmp[i]);
+							nvp.mDeep = nvp.mName.mNvpDeep;
+							nvp.mValue.mNvpDeep = nvp.mName.mNvpDeep;
+							stack.back()->mObject.emplace_back(nvp);
+						}
+					}
 				}
 				prevDeep = deep;
 			} else if (deep < prevDeep) {
@@ -506,7 +657,33 @@ bool cfg::TmlParser::getAsTree(Value &root,
 				++currentContiguousEmptyOrCommentCount;
 			}
 
-			stack.back()->mObject.push_back(cfgPair);
+			if (stack.back()->isObject()) {
+				if (cfgPair.mName.isArray() && cfgPair.mName.mArray.empty()) {
+					mErrorMsg = "An empty array as name of a name-value-pair is not allowed.";
+					root.clear();
+					return false;
+				}
+				if (cfgPair.mName.isObject() && cfgPair.mName.mObject.empty()) {
+					mErrorMsg = "An empty object as name of a name-value-pair is not allowed.";
+					root.clear();
+					return false;
+				}
+
+				stack.back()->mObject.push_back(cfgPair);
+			}
+			else if (stack.back()->isArray()) {
+				if (!cfgPair.mValue.isEmpty()) {
+					mErrorMsg = "An array can only store a value as element and no name value pair.";
+					root.clear();
+					return false;
+				}
+				stack.back()->mArray.push_back(cfgPair.mName);
+			}
+			else {
+				mErrorMsg = "The parent must be an object or an array.";
+				root.clear();
+				return false;
+			}
 		}
 	}
 	if (deep == -1) {

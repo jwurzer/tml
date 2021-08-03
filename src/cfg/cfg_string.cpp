@@ -55,7 +55,8 @@ std::string cfg::cfgstring::valueToString(unsigned int deep,
 	}
 	ss << "VALUE" << cfgValue.getFilePosition() << ": {";
 	//addTab(ss, deep + 1);
-	ss << "TYPE: " << strType[(cfgValue.mType < 8) ? cfgValue.mType : 8] << "(" << cfgValue.mType << ")";
+	ss << "NVP-DEEP: " << cfgValue.mNvpDeep <<
+			", TYPE: " << strType[(cfgValue.mType < 8) ? cfgValue.mType : 8] << "(" << cfgValue.mType << ")";
 	bool newline = false;
 	switch (cfgValue.mType) {
 		case Value::TYPE_NONE:
