@@ -20,18 +20,19 @@ namespace
 				"\n" <<
 				"commands and args:\n" <<
 				"------------------\n" <<
-				"  help                        ... print this help\n" <<
-				"  print <filename>            ... print the tml file\n" <<
-				"  print-values <filename>     ... print the tml file without empty lines and comments\n" <<
-				"  print-tml <filename>        ... print the tml file in tml-format\n" <<
-				"  print-tml-values <filename> ... print the tml file without empty lines and comments in tml-format\n" <<
-				"  templates <filename>        ... load and print templates from tml file\n" <<
-				"  include <filename>          ... load tml file and include all other tml files and print it\n" <<
-				"  include-buf <filename>      ... load tml file and include all other tml files and print it (with file buffering)\n" <<
-				"  printjson <filename>        ... print the json file\n" <<
-				"  printjson2tml <filename>    ... print the json file as tml\n" <<
-				"  printtml2json <filename>    ... print the tml file as json\n" <<
-				"  printjson2json <filename>   ... print the json file as json\n" <<
+				"  help                         ... print this help\n" <<
+				"  print <filename>             ... print the tml file\n" <<
+				"  print-values <filename>      ... print the tml file without empty lines and comments\n" <<
+				"  print-tml <filename>         ... print the tml file in tml-format\n" <<
+				"  print-tml-values <filename>  ... print the tml file without empty lines and comments in tml-format\n" <<
+				"  templates <filename>         ... load and print templates from tml file\n" <<
+				"  include <filename>           ... load tml file and include all other tml files and print it\n" <<
+				"  include-buf <filename>       ... load tml file and include all other tml files and print it (with file buffering)\n" <<
+				"  print-tml-entries <filename> ... print each tml entry per line\n" <<
+				"  printjson <filename>         ... print the json file\n" <<
+				"  printjson2tml <filename>     ... print the json file as tml\n" <<
+				"  printtml2json <filename>     ... print the tml file as json\n" <<
+				"  printjson2json <filename>    ... print the json file as json\n" <<
 				std::endl;
 	}
 
@@ -133,6 +134,32 @@ namespace
 		for (const auto& v : includedFiles) {
 			std::cout << v.first << ", count: " << v.second << std::endl;
 		}
+		return 0;
+	}
+
+	int printTmlEntries(const char* filename)
+	{
+		cfg::TmlParser p(filename);
+		cfg::NameValuePair cvp;
+		if (!p.begin()) {
+			std::cerr << "parse " << filename << " failed" << std::endl;
+			std::cerr << "error: " << p.getExtendedErrorMsg() << std::endl;
+			return 1;
+		}
+		int rv = -3;
+		for (;;) {
+			std::string line;
+			int lineNumber = 0;
+			rv = p.getNextTmlEntry(cvp, &line, &lineNumber);
+
+			std::cout << lineNumber << ":\t'" << line << "'" << std::endl;
+			std::cout << cfg::cfgstring::nameValuePairToString(rv >= 0 ? rv : 0, cvp) << std::endl;
+			if (rv < 0) {
+				break;
+			}
+		}
+		std::cout << "last return value: " << rv << std::endl;
+		std::cerr << "error: " << p.getExtendedErrorMsg() << std::endl;
 		return 0;
 	}
 
@@ -258,6 +285,14 @@ int main(int argc, char* argv[])
 			return 1;
 		}
 		return includeAndPrint(argv[2], true, true, command == "include-buf", false);
+	}
+	if (command == "print-tml-entries") {
+		if (argc != 3) {
+			std::cerr << "print-tml-entries command need exactly one argument/filename" << std::endl;
+			printHelp(argv[0]);
+			return 1;
+		}
+		return printTmlEntries(argv[2]);
 	}
 	if (command == "printjson") {
 		if (argc != 3) {

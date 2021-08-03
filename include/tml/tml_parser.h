@@ -26,6 +26,7 @@ namespace cfg
 		bool begin();
 		// return -1 for error, -2 for end of file or deep count for success
 		int getNextTmlEntry(NameValuePair& entry);
+		int getNextTmlEntry(NameValuePair& entry, std::string* outLine, int* outLineNumber);
 		// return -1 for error or deep count for success
 		int getNextTmlEntry(std::string& utf8Line, NameValuePair& entry,
 				int lineNumber);

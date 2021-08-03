@@ -71,6 +71,11 @@ bool cfg::TmlParser::begin()
 
 int cfg::TmlParser::getNextTmlEntry(NameValuePair& entry)
 {
+	return getNextTmlEntry(entry, nullptr, nullptr);
+}
+
+int cfg::TmlParser::getNextTmlEntry(NameValuePair& entry, std::string* outLine, int* outLineNumber)
+{
 	if (!mIfs.is_open()) {
 		mErrorCode = -3;
 		return -2;
@@ -89,6 +94,12 @@ int cfg::TmlParser::getNextTmlEntry(NameValuePair& entry)
 		return -2;
 	}
 	++mLineNumber;
+	if (outLine) {
+		*outLine = mLine;
+	}
+	if (outLineNumber) {
+		*outLineNumber = mLineNumber;
+	}
 	return getNextTmlEntry(mLine, entry, mLineNumber);
 }
 
@@ -158,6 +169,8 @@ int cfg::TmlParser::getNextTmlEntry(std::string& utf8Line, NameValuePair& entry,
 
 	unsigned int valueCount = 1;
 	unsigned int wordCountPerValue = 0;
+	bool isEmptyArray = false;
+	bool isEmptyObject = false;
 
 	Value* array = &entry.mName;
 	Value* value = &entry.mName;
@@ -182,6 +195,8 @@ int cfg::TmlParser::getNextTmlEntry(std::string& utf8Line, NameValuePair& entry,
 			array = &entry.mValue;
 			value = &entry.mValue;
 			wordCountPerValue = 0;
+			isEmptyArray = false;
+			isEmptyObject = false;
 		}
 
 		unsigned int wordStartIndex = i;
@@ -272,6 +287,14 @@ int cfg::TmlParser::getNextTmlEntry(std::string& utf8Line, NameValuePair& entry,
 		}
 		++wordCountPerValue;
 		if (wordCountPerValue == 2) {
+			if (isEmptyArray) {
+				mErrorMsg = "[] is not allowed in a single line array.";
+				return -1;
+			}
+			if (isEmptyObject) {
+				mErrorMsg = "{} is not allowed in a single line array.";
+				return -1;
+			}
 			Value cv = *value;
 			value->setArray();
 			value->mLineNumber = cv.mLineNumber;
@@ -310,6 +333,22 @@ int cfg::TmlParser::getNextTmlEntry(std::string& utf8Line, NameValuePair& entry,
 			//std::cout << "type: null" << std::endl;
 			value->setNull();
 		}
+		else if (!strcmp(word, "[]")) {
+			if (wordCountPerValue > 1) {
+				mErrorMsg = "[] is not allowed in a single line array.";
+				return -1;
+			}
+			value->setArray();
+			isEmptyArray = true;
+		}
+		else if (!strcmp(word, "{}")) {
+			if (wordCountPerValue > 1) {
+				mErrorMsg = "{} is not allowed in a single line array.";
+				return -1;
+			}
+			value->setObject();
+			isEmptyObject = true;
+		}
 		else {
 			//std::cout << "type: text" << std::endl;
 			value->setText(word);
@@ -326,7 +365,7 @@ int cfg::TmlParser::getNextTmlEntry(std::string& utf8Line, NameValuePair& entry,
 		for (; i < len && (utf8Line[i] == ' ' || utf8Line[i] == '\t'); ++i)
 			;
 	}
-	//std::cout << "TODO: " << deep << " " << utf8Line << std::endl;
+	//std::cout << "deep: " << deep << ", line: " << utf8Line << std::endl;
 	entry.mDeep = deep;
 	if (valueCount == 1) {
 		entry.mValue.mOffset = i + 1;

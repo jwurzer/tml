@@ -105,7 +105,7 @@ namespace cfg
 			}
 		}
 
-		void addValueToStringStream(const Value& cfgValue,
+		void addValueToStringStream(unsigned int deep, const Value& cfgValue,
 				std::stringstream& ss)
 		{
 			if (cfgValue.isSimple()) {
@@ -113,11 +113,46 @@ namespace cfg
 				return;
 			}
 			if (cfgValue.isArray()) {
+				if (cfgValue.mArray.empty()) {
+					ss << "[]";
+					return;
+				}
+				// TODO check if not empty if its only comments or empty lines...
 				std::size_t cnt = cfgValue.mArray.size();
+				bool fullArrayIsSimple = true;
 				for (std::size_t i = 0; i < cnt; ++i) {
-					addSimpleValueToStringStream(cfgValue.mArray[i], ss);
-					if (i + 1 < cnt) {
-						ss << " ";
+					if (!cfgValue.mArray[i].isSimple()) {
+						fullArrayIsSimple = false;
+						break;
+					}
+				}
+				if (fullArrayIsSimple) {
+					for (std::size_t i = 0; i < cnt; ++i) {
+						addSimpleValueToStringStream(cfgValue.mArray[i], ss);
+						if (i + 1 < cnt) {
+							ss << " ";
+						}
+					}
+				}
+				else {
+					ss << "[]\n";
+					for (std::size_t i = 0; i < cnt; ++i) {
+						bool forceDeepByStoredDeepValue = false; // TODO remove
+						int storedDeep = -2; // TODO remove
+						if (cfgValue.mArray[i].isObject()) {
+							addTab(ss, deep + 1);
+							ss << "{}\n";
+							::cfg::tmlstring::valueToStringStream(deep + 2,
+									cfgValue.mArray[i], ss,
+									forceDeepByStoredDeepValue, storedDeep);
+						}
+						else {
+							addTab(ss, deep + 1);
+							addValueToStringStream(deep + 1, cfgValue.mArray[i], ss);
+							if (i + 1 < cnt) {
+								ss << "\n";
+							}
+						}
 					}
 				}
 				return;
@@ -149,7 +184,7 @@ void cfg::tmlstring::valueToStringStream(unsigned int deep,
 	}
 	else {
 		addTab(ss, forceDeepByStoredDeepValue ? storedDeep : deep);
-		addValueToStringStream(cfgValue, ss);
+		addValueToStringStream(deep, cfgValue, ss);
 		ss << "\n";
 	}
 }
@@ -188,18 +223,24 @@ void cfg::tmlstring::nameValuePairToStringStream(unsigned int deep,
 		return;
 	}
 	addTab(ss, forceDeepByStoredDeepValue ? cfgPair.mDeep : deep);
-	addValueToStringStream(cfgPair.mName, ss);
+	addValueToStringStream(deep, cfgPair.mName, ss);
 	if (cfgPair.mValue.isObject()) {
-		ss << "\n";
-		addObjectToStringStream(deep + 1, cfgPair.mValue, ss,
-				forceDeepByStoredDeepValue);
+		if (cfgPair.mValue.mObject.empty()) {
+			// TODO check if not empty if its only comments or empty lines...
+			ss << " = {}\n";
+		}
+		else {
+			ss << "\n";
+			addObjectToStringStream(deep + 1, cfgPair.mValue, ss,
+					forceDeepByStoredDeepValue);
+		}
 	}
 	else if (cfgPair.mValue.isEmpty()) {
 		ss << "\n";
 	}
 	else {
 		ss << " = ";
-		addValueToStringStream(cfgPair.mValue, ss);
+		addValueToStringStream(deep, cfgPair.mValue, ss);
 		ss << "\n";
 	}
 }
