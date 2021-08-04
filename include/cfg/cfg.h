@@ -238,9 +238,28 @@ namespace cfg
 	};
 
 	/**
-	 * A name value pair has always two values. If the first value (name) is
-	 * a string then the name value pair is compatible with a JSON object which
-	 * must have a string and a value.
+	 * free function version of Value::objectGet. This version is
+	 * useful if you only the access to the array Value::mObject of the value
+	 * which stores the object but not access to the value itself.
+	 */
+	int objectGet(const std::vector<NameValuePair>& nvpairsOfObject,
+			const SelectRule *rules, bool allowRandomSequence,
+			bool allowUnusedValuePairs, bool allowEarlyReturn,
+			bool allowDuplicatedNames,
+			bool allowDuplicatedRuleNamesWithDiffTypes,
+			std::size_t startIndex,
+			std::size_t *outNextIndex,
+			EReset reset = EReset::RESET_POINTERS_TO_NULL,
+			std::string* errMsg = nullptr,
+			std::string* warnings = nullptr);
+
+	/**
+	 * A name value pair has a name and a value. But this name value pair type
+	 * uses for both, for the name and the value, the same type. The type Value
+	 * is used for the name and the value which means that the name does not
+	 * have to be a string. The name can also be a integer, boolean etc.
+	 * If the name is a string then the name value pair is compatible
+	 * with the entries of a JSON object which must have strings as names.
 	 */
 	class CFG_API NameValuePair
 	{
@@ -457,6 +476,11 @@ namespace cfg
 				mUsedCount(usedCount)
 				{ mStorePtr.mStr = strPtr; }
 
+		/**
+		 * Select rule for a value which holds an array. The array of the value
+		 * Value::mArray can be referenced by arrayPtr (after a successful
+		 * objectGet() call).
+		 */
 		SelectRule(const char* name, const std::vector<Value>** arrayPtr, ERule rule,
 				unsigned int typeFlags = ALLOW_ARRAY, unsigned int* usedCount = nullptr)
 				:mName(name),
@@ -472,36 +496,60 @@ namespace cfg
 				mUsedCount(usedCount)
 		{ mStorePtr.mArray = arrayPtr; }
 
-		SelectRule(const char* name, const std::vector<NameValuePair>** arrayPtr, ERule rule,
+		/**
+		 * Select a value (which is an object) of a name-value-pair and
+		 * references to its name-value-pair array Value::mObject.
+		 * If you want to use objectGet() for the received object in objPtr
+		 * then you have to use the free function version cfg::objectGet().
+		 * The member function cfg::Value::objectGet() can't be used because
+		 * not the object value itself is referenced in objPtr. Only the
+		 * array to the name-value-pairs of the object.
+		 */
+		SelectRule(const char* name, const std::vector<NameValuePair>** objPtr, ERule rule,
 				unsigned int typeFlags = ALLOW_OBJECT, unsigned int* usedCount = nullptr)
 				:mName(name),
 				mType(TYPE_OBJECT), mRule(rule),
 				mAllowedTypes(typeFlags),
 				mUsedCount(usedCount)
-				{ mStorePtr.mObject = arrayPtr; }
-		SelectRule(const std::string& name, const std::vector<NameValuePair>** arrayPtr, ERule rule,
+				{ mStorePtr.mObject = objPtr; }
+		SelectRule(const std::string& name, const std::vector<NameValuePair>** objPtr, ERule rule,
 				unsigned int typeFlags = ALLOW_OBJECT, unsigned int* usedCount = nullptr)
 				:mName(name),
 				mType(TYPE_OBJECT), mRule(rule),
 				mAllowedTypes(typeFlags),
 				mUsedCount(usedCount)
-				{ mStorePtr.mObject = arrayPtr; }
+				{ mStorePtr.mObject = objPtr; }
 
-		SelectRule(const char* name, const Value** arrayPtr, ERule rule,
+		/**
+		 * Select a value of a name-value-pair. Per default the
+		 * value of the name-value-pair must be an object. But this rule
+		 * can be also used to search for a value of any other type (if
+		 * typeFlags is set correctly). e.g. Can also be used to search for
+		 * a value which itself stores an array.
+		 * @note: For objects and arrays there is also another rule (Constructor)
+		 * available.
+		 */
+		SelectRule(const char* name, const Value** valuePtr, ERule rule,
 				unsigned int typeFlags = ALLOW_OBJECT, unsigned int* usedCount = nullptr)
 				:mName(name),
 				mType(TYPE_VALUE), mRule(rule),
 				mAllowedTypes(typeFlags),
 				mUsedCount(usedCount)
-		{ mStorePtr.mValue = arrayPtr; }
-		SelectRule(const std::string& name, const Value** arrayPtr, ERule rule,
+		{ mStorePtr.mValue = valuePtr; }
+		SelectRule(const std::string& name, const Value** valuePtr, ERule rule,
 				unsigned int typeFlags = ALLOW_OBJECT, unsigned int* usedCount = nullptr)
 				:mName(name),
 				mType(TYPE_VALUE), mRule(rule),
 				mAllowedTypes(typeFlags),
 				mUsedCount(usedCount)
-		{ mStorePtr.mValue = arrayPtr; }
+		{ mStorePtr.mValue = valuePtr; }
 
+		/**
+		 * Select a value of a name-value-pair but not only references to
+		 * the value. Instead its references to the whole name-value-pair.
+		 * Per default this rule allows only an object. But it can be used
+		 * for any other type.
+		 */
 		SelectRule(const char* name, const NameValuePair** valuePairPtr, ERule rule,
 					unsigned int typeFlags = ALLOW_OBJECT, unsigned int* usedCount = nullptr)
 				:mName(name),

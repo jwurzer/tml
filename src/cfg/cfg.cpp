@@ -411,6 +411,22 @@ int cfg::Value::objectGet(const SelectRule *rules,
 		std::size_t startIndex, std::size_t *outNextIndex,
 		EReset reset, std::string* errMsg, std::string* warnings) const
 {
+	return cfg::objectGet(mObject, rules,
+			allowRandomSequence, allowUnusedValuePairs,
+			allowEarlyReturn, allowDuplicatedNames,
+			allowDuplicatedRuleNamesWithDiffTypes,
+			startIndex, outNextIndex,
+			reset, errMsg, warnings);
+}
+
+int cfg::objectGet(const std::vector<NameValuePair>& nvpairsOfObject,
+		const SelectRule *rules,
+		bool allowRandomSequence, bool allowUnusedValuePairs,
+		bool allowEarlyReturn, bool allowDuplicatedNames,
+		bool allowDuplicatedRuleNamesWithDiffTypes,
+		std::size_t startIndex, std::size_t *outNextIndex,
+		EReset reset, std::string* errMsg, std::string* warnings)
+{
 	std::size_t rulesSize = 0;
 	unsigned int finalMustExistCount = 0;
 	unsigned int currentMustExistCount = 0;
@@ -483,7 +499,7 @@ int cfg::Value::objectGet(const SelectRule *rules,
 		++rulesSize;
 	}
 
-	std::size_t pairCount = mObject.size();
+	std::size_t pairCount = nvpairsOfObject.size();
 	std::size_t curRuleIndex = 0;
 	std::size_t storeCount = 0;
 
@@ -512,7 +528,7 @@ int cfg::Value::objectGet(const SelectRule *rules,
 		if (i >= pairCount) {
 			break;
 		}
-		const NameValuePair& vp = mObject[i];
+		const NameValuePair& vp = nvpairsOfObject[i];
 
 		if (vp.isEmpty() || vp.isComment()) {
 			// Should never be possible that prevTypeWasWrong is not already false.
@@ -549,7 +565,7 @@ int cfg::Value::objectGet(const SelectRule *rules,
 				// here i < pairCount is ok in for() because no --i is possible
 				// in this loop. See for() loop above for more infos.
 				for (; i < pairCount && storeCount < rulesSize; ++i) {
-					const NameValuePair& vp = mObject[i];
+					const NameValuePair& vp = nvpairsOfObject[i];
 					const std::string& vpAttrName =
 							(vp.mName.mType == Value::TYPE_TEXT) ?
 							vp.mName.mText : "";
