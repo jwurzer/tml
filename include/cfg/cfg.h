@@ -387,8 +387,8 @@ namespace cfg
 		{
 			SelectRule sr(name, boolPtr, rule, typeFlags, usedCount);
 			sr.mType = TYPE_NULL;
-			sr.mStorePtr.mBool = nullptr;
-			sr.mStorePtr.mNull = boolPtr;
+			sr.mStorePtr.mBool = nullptr; // makes not really a sense because its an union. mBool and mNull have the same memory space.
+			sr.mStorePtr.mNull = boolPtr; // important that mNull is set after mBool is set... because of union :-P (or simple remove the line above)
 			return sr;
 		}
 		static SelectRule nullRule(const std::string& name, bool* boolPtr, ERule rule,
@@ -396,8 +396,8 @@ namespace cfg
 		{
 			SelectRule sr(name, boolPtr, rule, typeFlags, usedCount);
 			sr.mType = TYPE_NULL;
-			sr.mStorePtr.mBool = nullptr;
-			sr.mStorePtr.mNull = boolPtr;
+			sr.mStorePtr.mBool = nullptr; // makes not really a sense because its an union. mBool and mNull have the same memory space.
+			sr.mStorePtr.mNull = boolPtr; // important that mNull is set after mBool is set... because of union :-P (or simple remove the line above)
 			return sr;
 		}
 
