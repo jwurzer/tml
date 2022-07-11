@@ -3,10 +3,12 @@
 #include <cfg/cfg_string.h>
 #include <cfg/cfg_template.h>
 #include <cfg/cfg_include.h>
+#include <cfg/cfg_cppstring.h>
 #include <tml/tml_string.h>
 #include <tml/tml_file_loader.h>
 #include <json/json_string.h>
 #include <json/json_parser.h>
+#include <cfg_cppstring_example.h>
 
 #include <string>
 #include <iostream>
@@ -33,6 +35,8 @@ namespace
 				"  printjson2tml <filename>     ... print the json file as tml\n" <<
 				"  printtml2json <filename>     ... print the tml file as json\n" <<
 				"  printjson2json <filename>    ... print the json file as json\n" <<
+				"  printtml2cpp <filename>      ... print the tml file as cpp\n" <<
+				"  printcppexample              ... print the cpp example\n" <<
 				std::endl;
 	}
 
@@ -220,6 +224,20 @@ namespace
 		std::cout << s << std::endl;
 		return 0;
 	}
+
+	int printTmlToCpp(const char* filename, bool inclEmptyLines, bool inclComments)
+	{
+		cfg::TmlParser p(filename);
+		cfg::NameValuePair cvp;
+		if (!p.getAsTree(cvp, inclEmptyLines, inclComments)) {
+			std::cerr << "parse " << filename << " failed" << std::endl;
+			std::cerr << "error: " << p.getExtendedErrorMsg() << std::endl;
+			return 1;
+		}
+		std::string s = cfg::cppstring::valueToString(0, cvp.mValue, false);
+		std::cout << s << std::endl;
+		return 0;
+	}
 }
 
 int main(int argc, char* argv[])
@@ -325,6 +343,19 @@ int main(int argc, char* argv[])
 			return 1;
 		}
 		return printJsonToJson(argv[2]);
+	}
+	if (command == "printtml2cpp") {
+		if (argc != 3) {
+			std::cerr << "printtml2cpp command need exactly one argument/filename" << std::endl;
+			printHelp(argv[0]);
+			return 1;
+		}
+		return printTmlToCpp(argv[2], true, true);
+	}
+	if (command == "printcppexample") {
+		std::string s = cfg::cppstring::valueToString(0, example, false);
+		std::cout << s << std::endl;
+		return 0;
 	}
 	std::cerr << "command '" << command << "' is not supported" << std::endl;
 	printHelp(argv[0]);

@@ -89,6 +89,24 @@ namespace cfg
 		std::vector<NameValuePair> mObject;
 
 		Value();
+		explicit Value(bool boolValue,
+				int lineNumber = -1, int offset = -1, int nvpDeep = -1,
+				const std::shared_ptr<const std::string>& filename = nullptr);
+		explicit Value(float floatingPointValue,
+				int lineNumber = -1, int offset = -1, int nvpDeep = -1,
+				const std::shared_ptr<const std::string>& filename = nullptr);
+		explicit Value(int integerValue, unsigned int parseBase,
+				int lineNumber = -1, int offset = -1, int nvpDeep = -1,
+				const std::shared_ptr<const std::string>& filename = nullptr);
+		explicit Value(const std::string& text,
+				int lineNumber = -1, int offset = -1, int nvpDeep = -1,
+				const std::shared_ptr<const std::string>& filename = nullptr);
+		explicit Value(const std::vector<Value>& array,
+				int lineNumber = -1, int offset = -1, int nvpDeep = -1,
+				const std::shared_ptr<const std::string>& filename = nullptr);
+		explicit Value(const std::vector<NameValuePair>& object,
+				int lineNumber = -1, int offset = -1, int nvpDeep = -1,
+				const std::shared_ptr<const std::string>& filename = nullptr);
 		Value(Value&& other);
 		Value& operator=(Value&& other);
 		Value(const Value& other) = default;
@@ -237,6 +255,36 @@ namespace cfg
 				std::string* warnings = nullptr) const;
 	};
 
+	Value none(int lineNumber = -1, int offset = -1, int nvpDeep = -1,
+			const std::shared_ptr<const std::string>& filename = nullptr);
+	Value nullValue(int lineNumber = -1, int offset = -1, int nvpDeep = -1,
+			const std::shared_ptr<const std::string>& filename = nullptr);
+	Value boolValue(bool boolValue,
+			int lineNumber = -1, int offset = -1, int nvpDeep = -1,
+			const std::shared_ptr<const std::string>& filename = nullptr);
+	Value floatValue(float floatingPointValue,
+			int lineNumber = -1, int offset = -1, int nvpDeep = -1,
+			const std::shared_ptr<const std::string>& filename = nullptr);
+	Value intValue(int integerValue, unsigned int parseBase = 10,
+			int lineNumber = -1, int offset = -1, int nvpDeep = -1,
+			const std::shared_ptr<const std::string>& filename = nullptr);
+	Value text(const std::string& text,
+			int lineNumber = -1, int offset = -1, int nvpDeep = -1,
+			const std::shared_ptr<const std::string>& filename = nullptr);
+	Value commentValue(const std::string& comment,
+			int lineNumber = -1, int offset = -1, int nvpDeep = -1,
+			const std::shared_ptr<const std::string>& filename = nullptr);
+	Value array(int lineNumber = -1, int offset = -1, int nvpDeep = -1,
+			const std::shared_ptr<const std::string>& filename = nullptr);
+	Value array(const std::vector<Value>& array,
+			int lineNumber = -1, int offset = -1, int nvpDeep = -1,
+			const std::shared_ptr<const std::string>& filename = nullptr);
+	Value object(int lineNumber = -1, int offset = -1, int nvpDeep = -1,
+			const std::shared_ptr<const std::string>& filename = nullptr);
+	Value object(const std::vector<NameValuePair>& object,
+			int lineNumber = -1, int offset = -1, int nvpDeep = -1,
+			const std::shared_ptr<const std::string>& filename = nullptr);
+
 	/**
 	 * free function version of Value::objectGet. This version is
 	 * useful if you only the access to the array Value::mObject of the value
@@ -271,6 +319,7 @@ namespace cfg
 		int mDeep;
 
 		NameValuePair();
+		NameValuePair(const Value& name, const Value& value, int deep = -1);
 		NameValuePair(NameValuePair&& other);
 		NameValuePair& operator=(NameValuePair&& other);
 		NameValuePair(const NameValuePair& other) = default;
@@ -297,6 +346,11 @@ namespace cfg
 		bool isEmptyObject() const { return mName.isEmpty() &&
 					mValue.isObject() && mValue.mObject.empty(); }
 	};
+
+	NameValuePair empty(int deep = -1);
+	NameValuePair comment(const std::string& comment, int deep = -1);
+	NameValuePair single(const Value& name, int deep = -1);
+	NameValuePair pair(const Value& name, const Value& value, int deep = -1);
 
 	class CFG_API SelectRule
 	{

@@ -56,6 +56,122 @@ cfg::Value::Value()
 {
 }
 
+cfg::Value::Value(bool boolValue,
+		int lineNumber, int offset, int nvpDeep,
+		const std::shared_ptr<const std::string>& filename)
+		:mFilename(filename),
+		mLineNumber(lineNumber),
+		mOffset(offset),
+		mNvpDeep(nvpDeep),
+		mType(TYPE_BOOL),
+		mParseBase(1),
+		mBool(boolValue),
+		mFloatingPoint(static_cast<float>(boolValue)),
+		mInteger(static_cast<int>(boolValue)),
+		mText(),
+		mArray(),
+		mObject()
+{
+}
+
+cfg::Value::Value(float floatingPointValue,
+		int lineNumber, int offset, int nvpDeep,
+		const std::shared_ptr<const std::string>& filename)
+		:mFilename(filename),
+		mLineNumber(lineNumber),
+		mOffset(offset),
+		mNvpDeep(nvpDeep),
+		mType(TYPE_FLOAT),
+		mParseBase(10),
+		mBool(floatingPointValue >= 0.5f || floatingPointValue <= -0.5f),
+		mFloatingPoint(floatingPointValue),
+		mInteger(static_cast<int>(floatingPointValue + ((floatingPointValue >= 0.0) ? 0.5f : -0.5f))),
+		mText(),
+		mArray(),
+		mObject()
+{
+}
+
+cfg::Value::Value(int integerValue, unsigned int parseBase,
+		int lineNumber, int offset, int nvpDeep,
+		const std::shared_ptr<const std::string>& filename)
+		:mFilename(filename),
+		mLineNumber(lineNumber),
+		mOffset(offset),
+		mNvpDeep(nvpDeep),
+		mType(TYPE_INT),
+		mParseBase(parseBase),
+		mBool(!!integerValue),
+		mFloatingPoint(static_cast<float>(integerValue)),
+		mInteger(integerValue),
+		mText(),
+		mArray(),
+		mObject()
+{
+	if (integerValue == 0 && parseBase == 0) {
+		mType = TYPE_NULL;
+		mParseBase = 0;
+		mBool = false;
+		mFloatingPoint = 0.0f;
+		mInteger = 0;
+	}
+}
+
+cfg::Value::Value(const std::string& text,
+		int lineNumber, int offset, int nvpDeep,
+		const std::shared_ptr<const std::string>& filename)
+		:mFilename(filename),
+		mLineNumber(lineNumber),
+		mOffset(offset),
+		mNvpDeep(nvpDeep),
+		mType(TYPE_TEXT),
+		mParseBase(0),
+		mBool(false),
+		mFloatingPoint(0.0f),
+		mInteger(0),
+		mText(text),
+		mArray(),
+		mObject()
+{
+}
+
+cfg::Value::Value(const std::vector<Value>& array,
+		int lineNumber, int offset, int nvpDeep,
+		const std::shared_ptr<const std::string>& filename)
+		:mFilename(filename),
+		mLineNumber(lineNumber),
+		mOffset(offset),
+		mNvpDeep(nvpDeep),
+		mType(TYPE_ARRAY),
+		mParseBase(0),
+		mBool(false),
+		mFloatingPoint(0.0f),
+		mInteger(0),
+		mText(),
+		mArray(array),
+		mObject()
+{
+}
+
+cfg::Value::Value(const std::vector<NameValuePair>& object,
+		int lineNumber, int offset, int nvpDeep,
+		const std::shared_ptr<const std::string>& filename)
+		:mFilename(filename),
+		mLineNumber(lineNumber),
+		mOffset(offset),
+		mNvpDeep(nvpDeep),
+		mType(TYPE_OBJECT),
+		mParseBase(0),
+		mBool(false),
+		mFloatingPoint(0.0f),
+		mInteger(0),
+		mText(),
+		mArray(),
+		mObject(object)
+{
+}
+
+
 cfg::Value::Value(Value&& other)
 		:mFilename(std::move(other.mFilename)),
 		mLineNumber(std::move(other.mLineNumber)),
@@ -419,6 +535,89 @@ int cfg::Value::objectGet(const SelectRule *rules,
 			reset, errMsg, warnings);
 }
 
+cfg::Value cfg::none(int lineNumber, int offset, int nvpDeep,
+		const std::shared_ptr<const std::string>& filename)
+{
+	Value v;
+	v.mLineNumber = lineNumber;
+	v.mOffset = offset;
+	v.mNvpDeep = nvpDeep;
+	v.mFilename = filename;
+	v.mType = Value::TYPE_NONE;
+	return v;
+}
+
+cfg::Value cfg::nullValue(int lineNumber, int offset, int nvpDeep,
+		const std::shared_ptr<const std::string>& filename)
+{
+	return Value{0, 0, lineNumber, offset, nvpDeep, filename};
+}
+
+cfg::Value cfg::boolValue(bool boolValue,
+		int lineNumber, int offset, int nvpDeep,
+		const std::shared_ptr<const std::string>& filename)
+{
+	return Value{boolValue, lineNumber, offset, nvpDeep, filename};
+}
+
+cfg::Value cfg::floatValue(float floatingPointValue,
+		int lineNumber, int offset, int nvpDeep,
+		const std::shared_ptr<const std::string>& filename)
+{
+	return Value{floatingPointValue, lineNumber, offset, nvpDeep, filename};
+}
+
+cfg::Value cfg::intValue(int integerValue, unsigned int parseBase,
+		int lineNumber, int offset, int nvpDeep,
+		const std::shared_ptr<const std::string>& filename)
+{
+	return Value{integerValue, parseBase, lineNumber, offset, nvpDeep, filename};
+}
+
+cfg::Value cfg::text(const std::string& text,
+		int lineNumber, int offset, int nvpDeep,
+		const std::shared_ptr<const std::string>& filename)
+{
+	return Value{text, lineNumber, offset, nvpDeep, filename};
+}
+
+cfg::Value cfg::commentValue(const std::string& comment,
+		int lineNumber, int offset, int nvpDeep,
+		const std::shared_ptr<const std::string>& filename)
+{
+	Value v{comment, lineNumber, offset, nvpDeep, filename};
+	v.mType = Value::TYPE_COMMENT;
+	return v;
+}
+
+cfg::Value cfg::array(int lineNumber, int offset, int nvpDeep,
+		const std::shared_ptr<const std::string>& filename)
+{
+	std::vector<Value> array;
+	return Value{array, lineNumber, offset, nvpDeep, filename};
+}
+
+cfg::Value cfg::array(const std::vector<Value>& array,
+		int lineNumber, int offset, int nvpDeep,
+		const std::shared_ptr<const std::string>& filename)
+{
+	return Value{array, lineNumber, offset, nvpDeep, filename};
+}
+
+cfg::Value cfg::object(int lineNumber, int offset, int nvpDeep,
+		const std::shared_ptr<const std::string>& filename)
+{
+	std::vector<NameValuePair> object;
+	return Value{object, lineNumber, offset, nvpDeep, filename};
+}
+
+cfg::Value cfg::object(const std::vector<NameValuePair>& object,
+		int lineNumber, int offset, int nvpDeep,
+		const std::shared_ptr<const std::string>& filename)
+{
+	return Value{object, lineNumber, offset, nvpDeep, filename};
+}
+
 int cfg::objectGet(const std::vector<NameValuePair>& nvpairsOfObject,
 		const SelectRule *rules,
 		bool allowRandomSequence, bool allowUnusedValuePairs,
@@ -739,6 +938,11 @@ cfg::NameValuePair::NameValuePair()
 {
 }
 
+cfg::NameValuePair::NameValuePair(const Value& name, const Value& value, int deep)
+		:mName(name), mValue(value), mDeep(deep)
+{
+}
+
 cfg::NameValuePair::NameValuePair(NameValuePair&& other)
 	:mName(std::move(other.mName)),
 	mValue(std::move(other.mValue)),
@@ -802,5 +1006,25 @@ void cfg::NameValuePair::setObject(const std::string &objectName)
 {
 	mName.setText(objectName);
 	mValue.setObject();
+}
+
+cfg::NameValuePair cfg::empty(int deep)
+{
+	return NameValuePair(none(), none(), deep);
+}
+
+cfg::NameValuePair cfg::comment(const std::string& comment, int deep)
+{
+	return pair(commentValue(comment), none(), deep);
+}
+
+cfg::NameValuePair cfg::single(const Value& name, int deep)
+{
+	return NameValuePair(name, none(), deep);
+}
+
+cfg::NameValuePair cfg::pair(const Value& name, const Value& value, int deep)
+{
+	return NameValuePair(name, value, deep);
 }
 
