@@ -2,6 +2,7 @@
 #include <cfg/cfg.h>
 #include <cfg/cfg_string.h>
 #include <cfg/cfg_template.h>
+#include <cfg/cfg_translation.h>
 #include <cfg/cfg_include.h>
 #include <cfg/cfg_cppstring.h>
 #include <tml/tml_string.h>
@@ -28,6 +29,8 @@ namespace
 				"  print-tml <filename>         ... print the tml file in tml-format\n" <<
 				"  print-tml-values <filename>  ... print the tml file without empty lines and comments in tml-format\n" <<
 				"  templates <filename>         ... load and print templates from tml file\n" <<
+				"  translations <filename>      ... load and print translations from tml file\n" <<
+				"  translations <filename> <prefix>   ... load and print translations from tml file\n" <<
 				"  include <filename>           ... load tml file and include all other tml files and print it\n" <<
 				"  include-buf <filename>       ... load tml file and include all other tml files and print it (with file buffering)\n" <<
 				"  print-tml-entries <filename> ... print each tml entry per line\n" <<
@@ -104,6 +107,59 @@ namespace
 		std::cout << "============================================" << std::endl;
 		std::cout << s << std::endl;
 		std::cout << "============================================" << std::endl;
+		return 0;
+	}
+
+	int loadAndPrintTranslations(const char* filename, const std::string& prefix)
+	{
+		cfg::TmlParser p(filename);
+		cfg::NameValuePair cvp;
+		if (!p.getAsTree(cvp, true, true)) {
+			std::cerr << "parse " << filename << " failed" << std::endl;
+			std::cerr << "error: " << p.getExtendedErrorMsg() << std::endl;
+			return 1;
+		}
+		cfg::Value& value = cvp.mValue;
+		std::string errorMsg;
+		cfg::cfgtr::LanguageMap languageMap;
+		if (!cfg::cfgtr::addTranslations(languageMap, value, true,
+				"translations", errorMsg)) {
+			std::cout << errorMsg << std::endl;
+			return false;
+		}
+		if (!languageMap.empty()) {
+			std::cout << "Language prefixes:";
+			for (const auto& langEntry : languageMap) {
+				std::cout << " '" << langEntry.first << "'";
+			}
+			std::cout << std::endl;
+		}
+		else {
+			std::cout << "Language prefixes: none" << std::endl;
+		}
+
+		for (const auto& langEntry : languageMap) {
+			std::cout << "Language '" << langEntry.first << "':" << std::endl;
+			for (const auto& translationEntry : langEntry.second) {
+				std::cout << "\t" << translationEntry.first << " = " <<
+						cfg::tmlstring::valueToString(0, translationEntry.second.mValue);
+			}
+		}
+
+		std::string langPrefix = prefix;
+		if (langPrefix.empty() && !languageMap.empty()) {
+			langPrefix = languageMap.begin()->first;
+			std::cout << "No prefix specified. Using first prefix '" << langPrefix << "'" << std::endl;
+		}
+
+		if (!cfg::cfgtr::useTranslations(languageMap,
+				langPrefix, "tr(", value, errorMsg)) {
+			std::cout << errorMsg << " for language: " << langPrefix << std::endl;
+			return false;
+		}
+
+		std::cout << "==================================" << std::endl;
+		std::cout << cfg::tmlstring::valueToString(0, value);
 		return 0;
 	}
 
@@ -295,6 +351,14 @@ int main(int argc, char* argv[])
 			return 1;
 		}
 		return loadAndPrintTemplates(argv[2]);
+	}
+	if (command == "translations") {
+		if (argc != 3 && argc != 4) {
+			std::cerr << "translations command need one or two arguments (filename or filename + prefix)" << std::endl;
+			printHelp(argv[0]);
+			return 1;
+		}
+		return loadAndPrintTranslations(argv[2], (argc == 4) ? argv[3] : "");
 	}
 	if (command == "include" || command == "include-buf") {
 		if (argc != 3) {

@@ -1,0 +1,21 @@
+
+translations
+	HELLO EN = "Good day!"
+	HELLO DE = "Guten Tag!"
+	HELLO IT = "Buona giornata!"
+	HELLO FR = "Bonjour !"
+	ONE EN = "One"
+	ONE DE = "Eins"
+	ONE IT = "Uno"
+	ONE FR = "Un"
+	LANG EN = English
+	LANG DE = German
+	LANG IT = Italian
+	LANG FR = French
+
+
+example
+	text1 = tr(HELLO)
+	text2 = tr(ONE)
+	text2 = tr(ONE) tr(LANG)
+

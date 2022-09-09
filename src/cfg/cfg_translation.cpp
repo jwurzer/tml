@@ -176,6 +176,9 @@ bool cfg::cfgtr::addTranslations(LanguageMap& languageMap,
 		std::string& outErrorMsg)
 {
 	for (const NameValuePair& nv : translations) {
+		if (nv.isEmptyOrComment()) {
+			continue;
+		}
 		if (!nv.mName.isArray()) {
 			outErrorMsg = nv.mName.getFilenameAndPosition() + ": is not an array.";
 			return false;
