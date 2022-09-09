@@ -31,6 +31,7 @@ namespace
 				"  templates <filename>         ... load and print templates from tml file\n" <<
 				"  translations <filename>      ... load and print translations from tml file\n" <<
 				"  translations <filename> <prefix>   ... load and print translations from tml file\n" <<
+				"  variables <filename>         ... load and print variables from tml file\n" <<
 				"  include <filename>           ... load tml file and include all other tml files and print it\n" <<
 				"  include-buf <filename>       ... load tml file and include all other tml files and print it (with file buffering)\n" <<
 				"  print-tml-entries <filename> ... print each tml entry per line\n" <<
@@ -155,6 +156,57 @@ namespace
 		if (!cfg::cfgtr::useTranslations(languageMap,
 				langPrefix, "tr(", value, errorMsg)) {
 			std::cout << errorMsg << " for language: " << langPrefix << std::endl;
+			return false;
+		}
+
+		std::cout << "==================================" << std::endl;
+		std::cout << cfg::tmlstring::valueToString(0, value);
+		return 0;
+	}
+
+	int loadAndPrintVariables(const char* filename)
+	{
+		cfg::TmlParser p(filename);
+		cfg::NameValuePair cvp;
+		if (!p.getAsTree(cvp, true, true)) {
+			std::cerr << "parse " << filename << " failed" << std::endl;
+			std::cerr << "error: " << p.getExtendedErrorMsg() << std::endl;
+			return 1;
+		}
+		cfg::Value& value = cvp.mValue;
+		std::string errorMsg;
+		cfg::cfgtr::LanguageMap languageMap;
+		if (!cfg::cfgtr::addVariables(languageMap, value, true,
+				"variables", errorMsg)) {
+			std::cout << errorMsg << std::endl;
+			return false;
+		}
+		if (languageMap.empty()) {
+			std::cout << "No variables exist" << std::endl;
+		}
+		else if (languageMap.size() > 1) {
+			std::cout << "Language prefixes:";
+			for (const auto& langEntry : languageMap) {
+				std::cout << " '" << langEntry.first << "'";
+			}
+			std::cout << std::endl;
+		}
+		else if (languageMap.begin()->first != "") {
+			std::cout << "Wrong prefix variables! Prefix is '" <<
+					languageMap.begin()->first << "'" << std::endl;
+		}
+
+		for (const auto& langEntry : languageMap) {
+			std::cout << "variables:" << std::endl;
+			for (const auto& translationEntry : langEntry.second) {
+				std::cout << "\t" << translationEntry.first << " = " <<
+						cfg::tmlstring::valueToString(0, translationEntry.second.mValue);
+			}
+		}
+
+		if (!cfg::cfgtr::useTranslations(languageMap,
+				"", "$(", value, errorMsg)) {
+			std::cout << errorMsg << " for variables" << std::endl;
 			return false;
 		}
 
@@ -359,6 +411,14 @@ int main(int argc, char* argv[])
 			return 1;
 		}
 		return loadAndPrintTranslations(argv[2], (argc == 4) ? argv[3] : "");
+	}
+	if (command == "variables") {
+		if (argc != 3) {
+			std::cerr << "variables command need exactly one argument/filename" << std::endl;
+			printHelp(argv[0]);
+			return 1;
+		}
+		return loadAndPrintVariables(argv[2]);
 	}
 	if (command == "include" || command == "include-buf") {
 		if (argc != 3) {

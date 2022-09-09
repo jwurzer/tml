@@ -1,0 +1,14 @@
+
+variables
+	LENGTH = 123.4
+	HEIGHT = 17.3
+	OBJECT = House
+	PRINT-ERROR = true
+	COUNT = 7
+
+example
+	dim = $(LENGTH) $(HEIGHT)
+	name = $(OBJECT)
+	printing = $(PRINT-ERROR)
+	nr = $(COUNT) $(COUNT)
+

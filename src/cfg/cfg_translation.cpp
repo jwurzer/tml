@@ -218,6 +218,9 @@ bool cfg::cfgtr::addVariables(LanguageMap& languageMap,
 	TranslationMap& translationMap = languageMap[languageId];
 
 	for (const NameValuePair& nv : translations) {
+		if (nv.isEmptyOrComment()) {
+			continue;
+		}
 		if (!nv.mName.isText()) {
 			outErrorMsg = nv.mName.getFilenameAndPosition() + ": is not an text.";
 			return false;
