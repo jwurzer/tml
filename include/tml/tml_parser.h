@@ -4,6 +4,7 @@
 #include <cfg/export.h>
 
 #include <fstream>
+#include <sstream>
 #include <string>
 
 namespace cfg
@@ -23,6 +24,8 @@ namespace cfg
 		~TmlParser();
 		void reset();
 		bool setFilename(const std::string& filename);
+		bool setStringBuffer(const std::string& pseudoFilename,
+				const std::string& strBuffer);
 		bool begin();
 		// return -1 for error, -2 for end of file or deep count for success
 		int getNextTmlEntry(NameValuePair& entry);
@@ -39,8 +42,12 @@ namespace cfg
 		// return filename with linenumber and error message
 		std::string getExtendedErrorMsg() const;
 	private:
+		bool mReadFromFile;
 		std::string mFilename;
+		std::string mStrBuffer;
 		std::ifstream mIfs;
+		std::istringstream mIss;
+		std::istream* mInStream;
 		std::string mLine;
 		int mErrorCode;
 		std::string mErrorMsg;

@@ -4,7 +4,8 @@
 #include <stdlib.h>
 
 cfg::TmlParser::TmlParser()
-		:mFilename(), mIfs(), mLine(), mErrorCode(0), mErrorMsg(),
+		:mReadFromFile(false), mFilename(), mStrBuffer(), mIfs(), mIss(),
+		mInStream(&mIss), mLine(), mErrorCode(0), mErrorMsg(),
 		mLineNumber(0),
 		mIndentChar(0),
 		mIndentCharCount(1)
@@ -29,7 +30,9 @@ void cfg::TmlParser::reset()
 	if (mIfs.is_open()) {
 		mIfs.close();
 	}
+	mIss.str(std::string());
 	mIfs.clear();
+	mIss.clear();
 	mLine.clear();
 	mErrorCode = 0;
 	mErrorMsg.clear();
@@ -42,13 +45,34 @@ bool cfg::TmlParser::setFilename(const std::string& filename)
 {
 	reset();
 
+	mReadFromFile = true;
 	mFilename = filename;
+	mStrBuffer.clear();
+	mInStream = &mIfs;
+	return true;
+}
+
+bool cfg::TmlParser::setStringBuffer(const std::string& pseudoFilename,
+		const std::string& strBuffer)
+{
+	reset();
+
+	mReadFromFile = false;
+	mFilename = pseudoFilename;
+	mStrBuffer = strBuffer;
+	mInStream = &mIss;
 	return true;
 }
 
 bool cfg::TmlParser::begin()
 {
 	mLineNumber = 0;
+	if (!mReadFromFile) {
+		mIss.str(mStrBuffer);
+		return true;
+	}
+
+	// --> read from file
 	if (mIfs.is_open()) {
 		mIfs.clear(); // clear error flags
 		mIfs.seekg(0, mIfs.beg);
@@ -75,12 +99,15 @@ int cfg::TmlParser::getNextTmlEntry(NameValuePair& entry)
 
 int cfg::TmlParser::getNextTmlEntry(NameValuePair& entry, std::string* outLine, int* outLineNumber)
 {
-	if (!mIfs.is_open()) {
-		mErrorCode = -3;
-		return -2;
+	if (mReadFromFile) {
+		// --> file is used
+		if (!mIfs.is_open()) {
+			mErrorCode = -3;
+			return -2;
+		}
 	}
-	getline(mIfs, mLine);
-	if (mIfs.eof()) {
+	getline(*mInStream, mLine);
+	if (mReadFromFile && mIfs.eof()) {
 		mIfs.close();
 		// no error code and no return here because if last line with content
 		// has no line break at the end then eof() is already true, but
@@ -88,7 +115,7 @@ int cfg::TmlParser::getNextTmlEntry(NameValuePair& entry, std::string* outLine, 
 		//mErrorCode = -3; // would be wrong here
 		//return -2; // would be wrong here
 	}
-	if (mIfs.fail()) {
+	if (mInStream->fail()) {
 		mErrorCode = -3;
 		return -2;
 	}

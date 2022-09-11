@@ -28,6 +28,7 @@ namespace
 				"  print-values <filename>      ... print the tml file without empty lines and comments\n" <<
 				"  print-tml <filename>         ... print the tml file in tml-format\n" <<
 				"  print-tml-values <filename>  ... print the tml file without empty lines and comments in tml-format\n" <<
+				"  print-tml-stdin              ... print the tml from stdin in tml-format\n" <<
 				"  templates <filename>         ... load and print templates from tml file\n" <<
 				"  translations <filename>      ... load and print translations from tml file\n" <<
 				"  translations <filename> <prefix>   ... load and print translations from tml file\n" <<
@@ -64,6 +65,35 @@ namespace
 		cfg::NameValuePair cvp;
 		if (!p.getAsTree(cvp, inclEmptyLines, inclComments)) {
 			std::cerr << "parse " << filename << " failed" << std::endl;
+			std::cerr << "error: " << p.getExtendedErrorMsg() << std::endl;
+			return 1;
+		}
+		//std::string s = cfg::tmlstring::nameValuePairToString(0, cvp);
+		std::string s = cfg::tmlstring::valueToString(0, cvp.mValue);
+		std::cout << s << std::endl;
+		return 0;
+	}
+
+	int printTmlAsTmlFromStdIn(bool inclEmptyLines, bool inclComments)
+	{
+		std::string line;
+		std::string lines;
+		std::cout << "========================================" << std::endl;
+		std::cout << "Please input tml. Quit input with CTRL+D" << std::endl;
+		std::cout << "========================================" << std::endl;
+		while (std::getline(std::cin, line))
+		{
+			lines += line + "\n";
+		}
+		std::cout << "input:" << std::endl;
+		std::cout << "======" << std::endl;
+		std::cout << lines << std::endl;
+		std::cout << "======" << std::endl;
+		cfg::TmlParser p;
+		p.setStringBuffer("standard-input", lines);
+		cfg::NameValuePair cvp;
+		if (!p.getAsTree(cvp, inclEmptyLines, inclComments)) {
+			std::cerr << "parse from standard input failed" << std::endl;
 			std::cerr << "error: " << p.getExtendedErrorMsg() << std::endl;
 			return 1;
 		}
@@ -395,6 +425,14 @@ int main(int argc, char* argv[])
 			return 1;
 		}
 		return printTmlAsTml(argv[2], false, false);
+	}
+	if (command == "print-tml-stdin") {
+		if (argc != 2) {
+			std::cerr << "print-tml-stdin command need no arguments" << std::endl;
+			printHelp(argv[0]);
+			return 1;
+		}
+		return printTmlAsTmlFromStdIn(true, true);
 	}
 	if (command == "templates") {
 		if (argc != 3) {
