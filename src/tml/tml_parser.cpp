@@ -341,7 +341,9 @@ int cfg::TmlParser::getNextTmlEntry(std::string& utf8Line, NameValuePair& entry,
 			// it can be also a text if isOnlyText is false.
 			// If isOnlyText is false it only can be a text if no other
 			// cases (number, boolean, etc.) accepted.
-			value->setText(word);
+			// In this case isOnlyText is true which means it was a text
+			// with quotes like "foo"
+			value->setText(word, true);
 		}
 		else if (isNumber && digitCount && dotCount == 0) {
 			//std::cout << "type: int" << std::endl;
@@ -380,8 +382,9 @@ int cfg::TmlParser::getNextTmlEntry(std::string& utf8Line, NameValuePair& entry,
 			isEmptyObject = true;
 		}
 		else {
+			// it's a text without quotes like foo instead of "foo"
 			//std::cout << "type: text" << std::endl;
-			value->setText(word);
+			value->setText(word, false);
 		}
 		value->mLineNumber = lineNumber;
 		value->mOffset = wordStartIndex + 1;

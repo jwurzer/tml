@@ -167,7 +167,9 @@ namespace cfg
 					//printf("'%.*s'", t->end - t->start, js + t->start);
 					std::string text;
 					text.insert(text.end(), js + t->start, js + t->end);
-					val.setText(convertEscapeSequences(text));
+					// in json only a text with quotes at begin and end is allowed.
+					// --> set parameter parseTextWithQuotes always to true.
+					val.setText(convertEscapeSequences(text), true);
 					return 1;
 				}
 				case JSMN_PRIMITIVE: {

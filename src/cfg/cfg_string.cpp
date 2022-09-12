@@ -1,4 +1,5 @@
 #include <cfg/cfg_string.h>
+#include <cfg/cfg_enum_string.h>
 #include <cfg/cfg.h>
 #include <sstream>
 
@@ -34,20 +35,6 @@ namespace {
 std::string cfg::cfgstring::valueToString(unsigned int deep,
 		const Value &cfgValue, const std::string &name)
 {
-	const char* strType[] = {
-			"TYPE_NONE",
-			"TYPE_NULL",
-			"TYPE_BOOL",
-			"TYPE_FLOAT",
-			"TYPE_INT",
-			"TYPE_TEXT",
-			"TYPE_COMMENT",
-			"TYPE_ARRAY",
-			"TYPE_OBJECT",
-
-			"error"
-	};
-
 	std::stringstream ss;
 	addTab(ss, deep);
 	if (!name.empty()) {
@@ -56,7 +43,7 @@ std::string cfg::cfgstring::valueToString(unsigned int deep,
 	ss << "VALUE" << cfgValue.getFilePosition() << ": {";
 	//addTab(ss, deep + 1);
 	ss << "NVP-DEEP: " << cfgValue.mNvpDeep <<
-			", TYPE: " << strType[(cfgValue.mType < 8) ? cfgValue.mType : 8] << "(" << cfgValue.mType << ")";
+			", TYPE: " << enumstring::getValueTypeAsString(cfgValue.mType) << "(" << cfgValue.mType << ")";
 	bool newline = false;
 	switch (cfgValue.mType) {
 		case Value::TYPE_NONE:

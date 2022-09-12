@@ -47,6 +47,7 @@ cfg::Value::Value()
 		mNvpDeep(-1),
 		mType(TYPE_NONE),
 		mParseBase(0),
+		mParseTextWithQuotes(false),
 		mBool(false),
 		mFloatingPoint(0.0f),
 		mInteger(0),
@@ -65,6 +66,7 @@ cfg::Value::Value(bool boolValue,
 		mNvpDeep(nvpDeep),
 		mType(TYPE_BOOL),
 		mParseBase(1),
+		mParseTextWithQuotes(false),
 		mBool(boolValue),
 		mFloatingPoint(static_cast<float>(boolValue)),
 		mInteger(static_cast<int>(boolValue)),
@@ -83,6 +85,7 @@ cfg::Value::Value(float floatingPointValue,
 		mNvpDeep(nvpDeep),
 		mType(TYPE_FLOAT),
 		mParseBase(10),
+		mParseTextWithQuotes(false),
 		mBool(floatingPointValue >= 0.5f || floatingPointValue <= -0.5f),
 		mFloatingPoint(floatingPointValue),
 		mInteger(static_cast<int>(floatingPointValue + ((floatingPointValue >= 0.0) ? 0.5f : -0.5f))),
@@ -101,6 +104,7 @@ cfg::Value::Value(int integerValue, unsigned int parseBase,
 		mNvpDeep(nvpDeep),
 		mType(TYPE_INT),
 		mParseBase(parseBase),
+		mParseTextWithQuotes(false),
 		mBool(!!integerValue),
 		mFloatingPoint(static_cast<float>(integerValue)),
 		mInteger(integerValue),
@@ -126,6 +130,7 @@ cfg::Value::Value(const std::string& text,
 		mNvpDeep(nvpDeep),
 		mType(TYPE_TEXT),
 		mParseBase(0),
+		mParseTextWithQuotes(false),
 		mBool(false),
 		mFloatingPoint(0.0f),
 		mInteger(0),
@@ -144,6 +149,7 @@ cfg::Value::Value(const std::vector<Value>& array,
 		mNvpDeep(nvpDeep),
 		mType(TYPE_ARRAY),
 		mParseBase(0),
+		mParseTextWithQuotes(false),
 		mBool(false),
 		mFloatingPoint(0.0f),
 		mInteger(0),
@@ -162,6 +168,7 @@ cfg::Value::Value(const std::vector<NameValuePair>& object,
 		mNvpDeep(nvpDeep),
 		mType(TYPE_OBJECT),
 		mParseBase(0),
+		mParseTextWithQuotes(false),
 		mBool(false),
 		mFloatingPoint(0.0f),
 		mInteger(0),
@@ -179,6 +186,7 @@ cfg::Value::Value(Value&& other)
 		mNvpDeep(std::move(other.mNvpDeep)),
 		mType(std::move(other.mType)),
 		mParseBase(std::move(other.mParseBase)),
+		mParseTextWithQuotes(std::move(other.mParseTextWithQuotes)),
 		mBool(std::move(other.mBool)),
 		mFloatingPoint(std::move(other.mFloatingPoint)),
 		mInteger(std::move(other.mInteger)),
@@ -191,6 +199,7 @@ cfg::Value::Value(Value&& other)
 	other.mNvpDeep = -1;
 	other.mType = TYPE_NONE;
 	other.mParseBase = 0;
+	other.mParseTextWithQuotes = false;
 	other.mBool = false;
 	other.mFloatingPoint = 0.0;
 	other.mInteger = 0;
@@ -207,6 +216,7 @@ cfg::Value& cfg::Value::operator=(Value&& other)
 	mNvpDeep = std::move(other.mNvpDeep);
 	mType = std::move(other.mType);
 	mParseBase = std::move(other.mParseBase);
+	mParseTextWithQuotes = std::move(other.mParseTextWithQuotes);
 	mBool = std::move(other.mBool);
 	mFloatingPoint = std::move(other.mFloatingPoint);
 	mInteger = std::move(other.mInteger);
@@ -219,6 +229,7 @@ cfg::Value& cfg::Value::operator=(Value&& other)
 	other.mNvpDeep = -1;
 	other.mType = TYPE_NONE;
 	other.mParseBase = 0;
+	other.mParseTextWithQuotes = false;
 	other.mBool = false;
 	other.mFloatingPoint = 0.0;
 	other.mInteger = 0;
@@ -258,6 +269,7 @@ void cfg::Value::clear()
 
 	mType = TYPE_NONE;
 	mParseBase = 0;
+	mParseTextWithQuotes = false;
 	mBool = false;
 	mFloatingPoint = 0.0;
 	mInteger = 0;
@@ -307,10 +319,11 @@ void cfg::Value::setInteger(int value, unsigned int parseBase)
 	mInteger = value;
 }
 
-void cfg::Value::setText(const std::string& text)
+void cfg::Value::setText(const std::string& text, bool parseTextWithQuotes)
 {
 	clear();
 	mType = TYPE_TEXT;
+	mParseTextWithQuotes = parseTextWithQuotes;
 	mText = text;
 }
 
@@ -367,7 +380,7 @@ const cfg::Value* cfg::Value::objectGetValue(const std::string &attrName) const
 {
 	const NameValuePair* valuePair = objectGetValuePair(attrName);
 	if (!valuePair) {
-		return NULL;
+		return nullptr;
 	}
 	return &valuePair->mValue;
 }

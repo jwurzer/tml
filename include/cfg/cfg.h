@@ -28,6 +28,8 @@ namespace cfg
 	class CFG_API Value
 	{
 	public:
+		// if changes at EValueType is necessary don't forget do update
+		// the function getValueTypeAsString() at cfg_enum_string.h
 		enum EValueType
 		{
 			TYPE_NONE  = 0, // none, nothing, empty (empty line)
@@ -80,6 +82,18 @@ namespace cfg
 		 * if mType is TYPE_BOOL then mParseBase is always 1.
 		 */
 		unsigned int mParseBase;
+		/**
+		 * only for additional informations for TYPE_TEXT. if mType is
+		 * TYPE_TEXT then mParseTextWithQuotes give infos if the text parsed
+		 * with quotes or without at begin and end.
+		 * e.g. with quotes:  "foo"   without quotes:  foo
+		 * Independent from parsing the text is always stored without quotes.
+		 * TML format supports text with and without quotes.
+		 * --> With TML true or false is possible.
+		 * Reading from JSON only true is possible because in JSON a text is
+		 * always inside quotes.
+		 */
+		bool mParseTextWithQuotes;
 
 		bool mBool;
 		float mFloatingPoint;
@@ -125,7 +139,7 @@ namespace cfg
 		void setBool(bool value);
 		void setFloatingPoint(float value);
 		void setInteger(int value, unsigned int parseBase = 10);
-		void setText(const std::string& text);
+		void setText(const std::string& text, bool parseTextWithQuotes = false);
 		void setComment(const std::string& text);
 		void setArray();
 		void setObject();
