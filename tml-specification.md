@@ -405,3 +405,22 @@ Output from the example:
 
 Example 3 would fail because the last name-value pair with 'yesterday = false' at the template DUMMY3 breaks the rule for child references.
 
+## Interpreter
+
+With the interpreter simple expressions can be evaluated and replaced by there results.
+
+Each expression and operator must be separated with a blank. This is necessary to ensure that the expressions and operators are parsed in an array.
+
+`i (` Evaluate and interpret an expression.
+
+`ii (` **I**nteger-**I**nterpreter for integer expressions. Inside only integers are allowed.
+
+`fi (` **F**loat-**I**nterpreter for float expressions. Inside only floats and integers are allowed. Integers are always converted to floats.
+
+`ti (` **T**ext-**I**nterpreter for text expressions. Floats and integers are converted to text.
+
+```
+i ( 3 + 4 + 5 + 6 )   -->   18
+```
+
+asdf

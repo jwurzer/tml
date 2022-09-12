@@ -288,7 +288,7 @@ void cfg::Value::setBool(bool value)
 {
 	clear();
 	mType = TYPE_BOOL;
-	mParseBase = 1;
+	mParseBase = 2; // two values possible --> false and true --> base is 2
 	mBool = value;
 	mFloatingPoint = static_cast<float>(value);
 	mInteger = static_cast<int>(value);

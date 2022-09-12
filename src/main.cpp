@@ -10,6 +10,7 @@
 #include <json/json_string.h>
 #include <json/json_parser.h>
 #include <cfg_cppstring_example.h>
+#include <interpreter/interpreter.h>
 
 #include <string>
 #include <iostream>
@@ -42,6 +43,7 @@ namespace
 				"  printjson2json <filename>    ... print the json file as json\n" <<
 				"  printtml2cpp <filename>      ... print the tml file as cpp\n" <<
 				"  printcppexample              ... print the cpp example\n" <<
+				"  interpreter-tests            ... some unit-tests for interpreter\n" <<
 				std::endl;
 	}
 
@@ -517,6 +519,10 @@ int main(int argc, char* argv[])
 	if (command == "printcppexample") {
 		std::string s = cfg::cppstring::valueToString(0, example, false);
 		std::cout << s << std::endl;
+		return 0;
+	}
+	if (command == "interpreter-tests") {
+		cfg::interpreter::unitTests();
 		return 0;
 	}
 	std::cerr << "command '" << command << "' is not supported" << std::endl;

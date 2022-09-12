@@ -79,7 +79,7 @@ namespace cfg
 		 * TYPE_INT then mParseBase give infos if it was a dec, octal or
 		 * hex string to parse.
 		 * if mType is TYPE_FLOAT then mParseBase is always 10.
-		 * if mType is TYPE_BOOL then mParseBase is always 1.
+		 * if mType is TYPE_BOOL then mParseBase is always 2.
 		 */
 		unsigned int mParseBase;
 		/**
