@@ -22,9 +22,10 @@ namespace cfg
 		 * Creates a new Lexer to tokenize the given string.
 		 * @param text String to tokenize.
 		 */
-		CfgLexer(const cfg::Value& expressionValue)
+		CfgLexer(const cfg::Value& expressionValue, bool allowInterpretationWithQuotes)
 			:mTokenValues(expressionValue.mArray),
-			mIndex(0)
+			mAllowInterpretationWithQuotes(allowInterpretationWithQuotes),
+			mIndex(0), mOutOfRangeIndex(mTokenValues.size())
 		{
 			// Register all of the TokenTypes that are explicit punctuators.
 			for (int tt = 0; tt <= static_cast<int>(TokenType::END_OF_FILE); ++tt) {
@@ -41,9 +42,10 @@ namespace cfg
 		}
 
 		virtual Token next() override {
-			while (mIndex < mTokenValues.size()) {
+			while (mIndex < mOutOfRangeIndex) {
 				const Value& val = mTokenValues[mIndex++];
-				char c = (val.isText() && !val.mParseTextWithQuotes &&
+				char c = (val.isText() &&
+						(mAllowInterpretationWithQuotes || !val.mParseTextWithQuotes) &&
 						val.mText.size() == 1) ? val.mText[0] : '\0';
 				if (mPunctuators.count(c) > 0) {
 					// Handle punctuation.
@@ -62,10 +64,27 @@ namespace cfg
 			return Token(TokenType::END_OF_FILE, Value{});
 		}
 
+		virtual bool movePosition(unsigned int absolutePositionIndex) {
+			mIndex = absolutePositionIndex;
+			return true;
+		}
+		virtual bool setRangePosition(unsigned int beginIndex, unsigned int outOfRangeIndex) {
+			if (beginIndex > outOfRangeIndex || outOfRangeIndex > mTokenValues.size()) {
+				return false;
+			}
+			mIndex = beginIndex;
+			mOutOfRangeIndex = outOfRangeIndex;
+			return true;
+		}
+
+		virtual unsigned int getPosition() const { return mIndex; }
+
 	private:
 		std::map<char, TokenType> mPunctuators;
 		std::vector<Value> mTokenValues;
-		unsigned int mIndex = 0;
+		bool mAllowInterpretationWithQuotes;
+		unsigned int mIndex;
+		unsigned int mOutOfRangeIndex;
 	};
 }
 

@@ -117,6 +117,11 @@ namespace cfg
 			return front;
 		}
 
+		TokenIterator& getTokenIterator() { return *mTokens; }
+
+		void reset() {
+			mRead.clear();
+		}
 	private:
 		Token lookAhead(unsigned int distance) {
 			// Read in as many as needed.

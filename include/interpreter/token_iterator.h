@@ -11,6 +11,9 @@ namespace cfg
 		virtual ~TokenIterator() = default;
 		virtual bool hasNext() const = 0;
 		virtual Token next() = 0;
+		virtual bool movePosition(unsigned int /*absolutePositionIndex*/) { return false; }
+		virtual bool setRangePosition(unsigned int /*beginIndex*/, unsigned int /*outOfRangeIndex*/) { return false; }
+		virtual unsigned int getPosition() const { return 0; }
 	};
 }
 

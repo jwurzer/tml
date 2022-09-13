@@ -10,7 +10,8 @@
 #include <json/json_string.h>
 #include <json/json_parser.h>
 #include <cfg_cppstring_example.h>
-#include <interpreter/interpreter.h>
+//#include <interpreter/interpreter.h>
+#include <interpreter/interpreter_unit_tests.h>
 
 #include <string>
 #include <iostream>

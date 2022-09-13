@@ -14,11 +14,20 @@ namespace cfg
 {
 	namespace interpreter
 	{
-		//int evaluateAndStore(cfg::Value& exprResultValue);
+		/**
+		 * Evaluate and interpret the value if one or more expressions are used.
+		 * If no expression is used then the value is unchanged and the
+		 * function return 0.
+		 * @param exprResultValue For input and output.
+		 * @return -1 for error happened at evaluation and interpretation
+		 *         0 for no evaluation and interpretation,
+		 *         1 for successful evaluation and interpretation
+		 */
+		CFG_API
+		int interpretAndStore(cfg::Value& exprResultValue,
+				bool allowInterpretationWithQuotes);
 
 		std::unique_ptr<expressions::Expression> getAbstractSyntaxTree(const cfg::Value& expressionValue);
-
-		bool unitTests();
 	}
 }
 

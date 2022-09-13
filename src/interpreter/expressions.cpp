@@ -55,6 +55,18 @@ namespace cfg
 				return true;
 			}
 
+			bool functionInterpreter(Context& /*context*/, const std::string& funcName,
+					const std::vector<cfg::Value>& args, cfg::Value& result,
+					std::ostream& errMsg)
+			{
+				if (!isParameterCountCorrect(funcName, args, 1, errMsg)) {
+					return false;
+				}
+				const cfg::Value& arg = args[0];
+				result = std::move(arg);
+				return true;
+			}
+
 			bool functionAbs(Context& /*context*/, const std::string& funcName,
 					const std::vector<cfg::Value>& args, cfg::Value& result,
 					std::ostream& errMsg)
@@ -174,6 +186,9 @@ bool cfg::expressions::CallExpression::interpret(Context& context,
 		++i;
 	}
 
+	if (funcName == "_i") {
+		return functionInterpreter(context, funcName, argsResults, result, errMsg);
+	}
 	if (funcName == "abs") {
 		return functionAbs(context, funcName, argsResults, result, errMsg);
 	}

@@ -2,7 +2,7 @@
 #define CFG_CFG_PARSER_H
 
 #include <interpreter/parser.h>
-#include <interpreter/parselets.h>
+#include <interpreter/parselets_impl.h>
 
 namespace cfg
 {
@@ -18,7 +18,7 @@ namespace cfg
 			// Register all of the parselets for the grammar.
 
 			// Register the ones that need special parselets.
-			registerParselet(TokenType::VALUE,       std::unique_ptr<parselets::ValueParselet>(new parselets::ValueParselet()));
+			registerParselet(TokenType::VALUE,      std::unique_ptr<parselets::ValueParselet>(new parselets::ValueParselet()));
 			registerParselet(TokenType::QUESTION,   std::unique_ptr<parselets::ConditionalParselet>(new parselets::ConditionalParselet()));
 			registerParselet(TokenType::LEFT_PAREN, std::unique_ptr<parselets::GroupParselet>(new parselets::GroupParselet()));
 			registerParselet(TokenType::LEFT_PAREN, std::unique_ptr<parselets::CallParselet>(new parselets::CallParselet()));

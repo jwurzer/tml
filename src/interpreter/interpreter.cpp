@@ -1,342 +1,120 @@
 #include <interpreter/interpreter.h>
-#include <interpreter/parselets_impl.h>
 #include <interpreter/cfg_parser.h>
-#include <interpreter/lexer.h>
 #include <interpreter/cfg_lexer.h>
-#include <tml/tml_parser.h>
-#include <cfg/cfg_string.h>
-#include <sstream>
+//#include <cfg/cfg_string.h>
 #include <iostream>
 
-std::unique_ptr<cfg::expressions::Expression> cfg::interpreter::getAbstractSyntaxTree(
-		const cfg::Value& /*expValue*/)
+int cfg::interpreter::interpretAndStore(cfg::Value& exprResultValue,
+		bool allowInterpretationWithQuotes)
 {
-	return std::unique_ptr<cfg::expressions::Expression>();
-#if 0
-	if (!expValue.isArray()) {
-		return std::unique_ptr<ParseError>(new ParseError("Value for expression is no array."));
+	if (!exprResultValue.isArray()) {
+		// nothing to do
+		return 0;
 	}
-	if (expValue.mArray.empty()) {
-		// TODO return null object
-		return std::unique_ptr<ParseError>(new ParseError("Empty array for expression is not allowed."));
-	}
-	//std::unique_ptr<Parenthesis> root(new Parenthesis());
-	return getAbstractSyntaxTree(expValue.mArray, 0, expValue.mArray.size() - 1, root);
-#endif
-}
-
-static int sPassed = 0;
-static int sFailed = 0;
-
-/**
- * Parses the given chunk of code and verifies that it matches the expected
- * pretty-printed result.
- * @return 1 for success, 0 for failed
- */
-static void test(std::unique_ptr<cfg::TokenIterator> sourceTokens,
-		const std::string& expected,
-		unsigned int expectedExpressionCount)
-{
-	std::unique_ptr<cfg::Parser> parser(new cfg::CfgParser(std::move(sourceTokens)));
-
-	std::string actual;
-	std::string actualEx;
-	unsigned int errorCount = 0;
+	unsigned int count = exprResultValue.mArray.size();
+	std::unique_ptr<cfg::CfgParser> parser; // only created at first usage
+	cfg::Value fullResult;
+	fullResult.setArray();
 	unsigned int expressionCount = 0;
-	for (;; ++expressionCount) {
-		std::unique_ptr<cfg::expressions::Expression> result = parser->parseFullExpressionAllowEmpty(
-				errorCount);
-		if (result->getExpressionType() == cfg::expressions::ExpressionType::EMPTY) {
-			break;
+	// nextStartIndex ... next start for an expression
+	unsigned int nextStartIndex = 0;
+	for (unsigned int i = 1; i < count; ++i) {
+		if (i <= nextStartIndex) {
+			continue;
+		}
+		// --> i > nextStartIndex --> i can only be >= 1
+		const cfg::Value& val = exprResultValue.mArray[i];
+		if (!val.isText() || val.mText != "(" ||
+				(!allowInterpretationWithQuotes && val.mParseTextWithQuotes)) {
+			continue;
+		}
+		const cfg::Value& prev = exprResultValue.mArray[i - 1];
+		if (!prev.isText()) {
+			continue;
+		}
+		if (prev.mText != "_i" && prev.mText != "_ii" &&
+				prev.mText != "_fi" && prev.mText != "_ti") {
+			continue;
+		}
+		if (!allowInterpretationWithQuotes && prev.mParseTextWithQuotes) {
+			continue;
+		}
+		// --> expression for interpreter start with
+		// '_i (',  '_ii (',  '_fi ('  or  '_ti ('
+		++expressionCount;
+		if (!parser) {
+			std::unique_ptr<cfg::CfgLexer> lexer(new cfg::CfgLexer(exprResultValue, allowInterpretationWithQuotes));
+			parser = std::unique_ptr<cfg::CfgParser>(new cfg::CfgParser(std::move(lexer)));
+		}
+		unsigned int curStartIndex = i - 1;
+
+		// ci ... copy index
+		for (unsigned int ci = nextStartIndex; ci < curStartIndex; ++ci) {
+			// without std::move() because we doesn't want change the original input.
+			// Because if an error happened exprResultValue should be unchanged.
+			//std::cout << "copy " << ci << std::endl;
+			fullResult.mArray.push_back(exprResultValue.mArray[ci]);
 		}
 
-		if (expressionCount > 0) {
-			actual += " ";
-			actualEx += " ";
+		int parenCount = 1;
+		for (++i; i < count && parenCount > 0; ++i) {
+			const cfg::Value& next = exprResultValue.mArray[i];
+			if (next.isText() && !next.mParseTextWithQuotes && next.mText.size() == 1) {
+				char ch = next.mText[0];
+				if (ch == '(') {
+					++parenCount;
+				}
+				else if (ch == ')') {
+					--parenCount;
+				}
+			}
 		}
-
-		std::stringstream builder;
-		result->print(builder);
-		actual += builder.str();
-
-		std::stringstream builderEx;
-		result->printEx(builderEx);
-		actualEx += builderEx.str();
-	}
-
-	if (errorCount == 0) {
-		if (expected == actual && expressionCount == expectedExpressionCount) {
-			std::cout << "[OK]: " << expressionCount << " " << expectedExpressionCount <<
-					": '" << expected <<
-					"' == '" << actual <<
-					"' Ex: '" << actualEx << "'" << std::endl;
-			sPassed++;
-		} else {
-			sFailed++;
-			std::cout << "[FAIL] Expected: " << expected << std::endl;
-			std::cout << "         Actual: " << actual << std::endl;
-			std::cout << "         counts: " << expressionCount << " " << expectedExpressionCount << std::endl;
+		if (parenCount > 0) {
+			std::cout << "Can't find ending" << std::endl;
+			return -1;
 		}
-	} else {
-		sFailed++;
-		// TODO: print message from ParseErrorExpression
-		std::cout << "[FAIL] Expected: " << expected << ", is: " << actual << std::endl;
-		std::cout << "    Error count: " << errorCount << std::endl;
-		std::cout << "         counts: " << expressionCount << " " << expectedExpressionCount << std::endl;
-	}
-}
-
-static void test(const std::string& source, const std::string& expected,
-		unsigned int expectedExpressionCount = 1)
-{
-	std::unique_ptr<cfg::Lexer> lexer(new cfg::Lexer(source));
-	test(std::move(lexer), expected, expectedExpressionCount);
-}
-
-static std::unique_ptr<cfg::CfgLexer> getCfgLexer(const std::string& tmlSource)
-{
-	cfg::TmlParser parser;
-	parser.setStringBuffer("tml-expression", tmlSource);
-	cfg::Value value;
-	if (!parser.getAsTree(value, true, true)) {
-		std::cout << "Parsing tml source failed! source: '" << tmlSource << "'" << std::endl;
-		return nullptr;
-	}
-	//std::cout << "tml input: " << cfg::tmlstring::valueToString(0, value) << std::endl;
-	//std::cout << "tml input: " << cfg::cfgstring::valueToString(0, value) << std::endl;
-	cfg::Value* val = &value;
-	if (val->isObject()) {
-		if (val->mObject.empty()) {
-			val->setArray();
+		if (!parser->getTokenIterator().setRangePosition(curStartIndex, i)) {
+			return -1;
 		}
-		else if (val->mObject.size() == 1) {
-			val = &val->mObject[0].mName;
-		}
-	}
+		parser->reset();
+		nextStartIndex = i;
+		//std::cout << "interpreter start with '" << prev.mText << " " << val.mText << "'" << std::endl;
+		//std::cout << "interpreter from index '" << curStartIndex << "' to '" << (i - 1) << "'" << std::endl;
 
-	if (val->isEmpty()) {
-		val->setArray();
-	}
-	else if (val->isText()) {
-		// convert text to a array with one text entry.
-		cfg::Value entry(val->mText);
-		val->setArray();
-		val->mArray.push_back(entry);
-	}
+		// other loop make ++i --> --i would "normally" be necessary here.
+		// But not necessary because start sequence for interpreter takes
+		// to token like '_i (',  '_ii (',  '_fi ('  or  '_ti ('
+		// not necessary: --i;
 
-	if (!val->isArray()) {
-		std::cout << "No cfg value array." << std::endl;
-		return nullptr;
-	}
-#if 0
-	if (val->mArray.empty()) {
-		std::cout << "Empty cfg value array is not allowed." << std::endl;
-		return nullptr;
-	}
-#endif
-	std::unique_ptr<cfg::CfgLexer> lexer(new cfg::CfgLexer(*val));
-	return lexer;
-}
-
-static void testTml(const std::string& tmlSource, const std::string& expected,
-		unsigned int expectedExpressionCount = 1)
-{
-	std::unique_ptr<cfg::CfgLexer> lexer = getCfgLexer(tmlSource);
-	if (!lexer) {
-		++sFailed;
-		return;
-	}
-	test(std::move(lexer), expected, expectedExpressionCount);
-}
-
-static void interpret(std::unique_ptr<cfg::TokenIterator> sourceTokens,
-		const std::vector<cfg::Value>& expected)
-{
-	std::unique_ptr<cfg::Parser> parser(
-			new cfg::CfgParser(std::move(sourceTokens)));
-
-	unsigned int expressionCount = 0;
-	for (;; ++expressionCount) {
 		unsigned int errorCount = 0;
-		std::unique_ptr<cfg::expressions::Expression> result = parser->parseFullExpressionAllowEmpty(
-				errorCount);
-		if (result->getExpressionType() == cfg::expressions::ExpressionType::EMPTY) {
-			break;
+		std::unique_ptr<expressions::Expression> expr = parser->parseFullExpression(errorCount);
+		if (errorCount) {
+			std::cout << "error count " << errorCount << std::endl;
+			return -1;
 		}
-
-		if (errorCount > 0) {
-			std::cout << "parsing error" << std::endl;
-			continue;
+		expressions::Context context;
+		cfg::Value exprResult;
+		if (!expr->interpret(context, exprResult, std::cout)) {
+			return -1;
 		}
+		fullResult.mArray.push_back(std::move(exprResult));
 
-		cfg::expressions::Context context;
-		cfg::Value interpretResult;
-		std::stringstream errMsg;
-		if (!result->interpret(context, interpretResult, errMsg)) {
-			std::cout << "interpret failed! err msg:" << std::endl;
-			std::cout << errMsg.str() << std::endl;
-			continue;
+		unsigned int newTokenPosition = parser->getTokenIterator().getPosition();
+		if (newTokenPosition != i) {
+			std::cout << "wrong internal state" << std::endl;
+			return -1;
 		}
-
-		result->print(std::cout);
-		std::cout << " = " << cfg::tmlstring::valueToString(0, interpretResult);
+		//std::cout << "parsed from " << curStartIndex << " to " << (newTokenPosition - 1) << std::endl;
 	}
-	if (expressionCount != expected.size()) {
-		std::cout << "wrong expression count: " << expressionCount << " != " <<
-				expected.size() << std::endl;
+	if (expressionCount > 0) {
+		for (unsigned int ci = nextStartIndex; ci < count; ++ci) {
+			//std::cout << "finish copy " << ci << std::endl;
+			// here std::move() can be used because exprResultValue is replaced at the end
+			fullResult.mArray.push_back(std::move(exprResultValue.mArray[ci]));
+		}
+		// now fullResult is finished --> replace value from parameter
+		exprResultValue = std::move(fullResult);
+		return 1;
 	}
-}
-
-static void interpretTml(const std::string& tmlSource, const cfg::Value& expected)
-{
-	std::unique_ptr<cfg::CfgLexer> lexer = getCfgLexer(tmlSource);
-	if (!lexer) {
-		++sFailed;
-		return;
-	}
-	std::vector<cfg::Value> expectedResults;
-	expectedResults.push_back(expected);
-	interpret(std::move(lexer), expectedResults);
-}
-
-static void interpretTml(const std::string& tmlSource, int expected)
-{
-	cfg::Value expectedValue;
-	expectedValue.setInteger(expected);
-	interpretTml(tmlSource, expectedValue);
-}
-
-bool testsWithLexer()
-{
-	sPassed = 0;
-	sFailed = 0;
-
-	test("", "", 0);
-	test("a b c", "a b c", 3);
-	//test("a(+)", "a((+))");
-	//test("a)", "a)");
-#if 1
-	// Function call.
-	test("a()", "a()");
-	test("a(b)", "a(b)");
-	test("a(b, c)", "a(b, c)");
-	test("a(b)(c)", "a(b)(c)");
-	test("a(b) + c(d)", "(a(b) + c(d))");
-	test("a(b ? c : d, e + f)", "a((b ? c : d), (e + f))");
-
-	// Unary precedence.
-	test("~!-+a", "(~(!(-(+a))))");
-	test("a!!!", "(((a!)!)!)");
-
-	// Unary and binary predecence.
-	test("-a * b", "((-a) * b)");
-	test("!a + b", "((!a) + b)");
-	test("~a ^ b", "((~a) ^ b)");
-	test("-a!",    "(-(a!))");
-	test("!a!",    "(!(a!))");
-
-	// Binary precedence.
-	test("a = b + c * d ^ e - f / g", "(a = ((b + (c * (d ^ e))) - (f / g)))");
-
-	// Binary associativity.
-	test("a = b = c", "(a = (b = c))");
-	test("a + b - c", "((a + b) - c)");
-	test("a * b / c", "((a * b) / c)");
-	test("a ^ b ^ c", "(a ^ (b ^ c))");
-
-	// Conditional operator.
-	test("a ? b : c ? d : e", "(a ? b : (c ? d : e))");
-	test("a ? b ? c : d : e", "(a ? (b ? c : d) : e)");
-	test("a + b ? c * d : e / f", "((a + b) ? (c * d) : (e / f))");
-
-	// Grouping.
-	test("a + (b + c) + d", "((a + (b + c)) + d)");
-	test("a ^ (b + c)", "(a ^ (b + c))");
-	test("(!a)!",    "((!a)!)");
-#endif
-
-	// Show the results.
-	if (sFailed == 0) {
-		std::cout << "Passed all " << sPassed << " tests." << std::endl;
-	} else {
-		std::cout << "----";
-		std::cout << "Failed " << sFailed << " out of " +
-				(sFailed + sPassed) << " tests." << std::endl;
-	}
-	return sFailed == 0;
-}
-
-bool testsWithCfgLexer()
-{
-	sPassed = 0;
-	sFailed = 0;
-
-	testTml("", "", 0);
-	testTml("a", "a");
-	testTml("a b c", "a b c", 3);
-
-#if 0
-	// Function call.
-	testTml("a( )", "a()");
-	testTml("a ( b )", "a(b)");
-	testTml("axy ( bxy , cxy )", "axy(bxy, cxy)");
-	testTml("a ( b ) ( c )", "a(b)(c)");
-	testTml("a ( b ) + c ( d )", "(a(b) + c(d))");
-	testTml("a ( b ? c : d , e + f )", "a((b ? c : d), (e + f))");
-
-	// Unary precedence.
-	testTml("~ ! - + a", "(~(!(-(+a))))");
-	testTml("a ! ! !", "(((a!)!)!)");
-
-	// Unary and binary predecence.
-	testTml("- a * b", "((-a) * b)");
-	testTml("! a + b", "((!a) + b)");
-	testTml("~ a ^ b", "((~a) ^ b)");
-	testTml("- a !",    "(-(a!))");
-	testTml("! a !",    "(!(a!))");
-
-	// Binary precedence.
-	//testTml("a = b + c * d ^ e - f / g", "(a = ((b + (c * (d ^ e))) - (f / g)))");
-
-	// Binary associativity.
-	//testTml("a = b = c", "(a = (b = c))");
-	testTml("a + b - c", "((a + b) - c)");
-	testTml("a * b / c", "((a * b) / c)");
-	testTml("a ^ b ^ c", "(a ^ (b ^ c))");
-
-	// Conditional operator.
-	testTml("a ? b : c ? d : e", "(a ? b : (c ? d : e))");
-	testTml("a ? b ? c : d : e", "(a ? (b ? c : d) : e)");
-	testTml("a + b ? c * d : e / f", "((a + b) ? (c * d) : (e / f))");
-
-	// Grouping.
-	testTml("a + ( b + c ) + d", "((a + (b + c)) + d)");
-	testTml("a ^ ( b + c )", "(a ^ (b + c))");
-	testTml("( ! a ) !",    "((!a)!)");
-#endif
-	// Show the results.
-	if (sFailed == 0) {
-		std::cout << "Passed all " << sPassed << " tests." << std::endl;
-	} else {
-		std::cout << "----";
-		std::cout << "Failed " << sFailed << " out of " +
-				(sFailed + sPassed) << " tests." << std::endl;
-	}
-	return sFailed == 0;
-}
-
-bool interpretWithCfgLexer()
-{
-	//interpretTml("1000 -  - 123", 7);
-	interpretTml("abs ( - 123 )", 7);
-	return true;
-}
-
-bool cfg::interpreter::unitTests()
-{
-	bool rv = true;
-	//rv = testsWithLexer() && rv;
-	//rv = testsWithCfgLexer() && rv;
-	rv = interpretWithCfgLexer() && rv;
-	return rv;
+	return 0;
 }
