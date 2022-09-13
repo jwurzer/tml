@@ -397,7 +397,7 @@ namespace
 		std::cout << s << std::endl;
 
 		std::stringstream errMsg;
-		if (cfg::interpreter::interpretAndReplace(value, false, true, true, errMsg) == -1) {
+		if (cfg::interpreter::interpretAndReplace(value, false, true, true, true, errMsg) == -1) {
 			std::cout << "=========== evaluate expressions FAILED ==========" << std::endl;
 			std::cout << errMsg.str() << std::endl;
 			return 1;
@@ -447,7 +447,7 @@ namespace
 		std::cout << s << std::endl;
 
 		std::stringstream errMsg;
-		if (cfg::interpreter::interpretAndReplace(value, false, true, true, errMsg) == -1) {
+		if (cfg::interpreter::interpretAndReplace(value, false, true, true, true, errMsg) == -1) {
 			std::cout << "=========== evaluate expressions FAILED ==========" << std::endl;
 			std::cout << errMsg.str() << std::endl;
 			return 1;

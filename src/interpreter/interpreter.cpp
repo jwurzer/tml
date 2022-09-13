@@ -112,23 +112,51 @@ int cfg::interpreter::interpretAndReplaceExprValue(cfg::Value& exprResultValue,
 			fullResult.mArray.push_back(std::move(exprResultValue.mArray[ci]));
 		}
 		// now fullResult is finished --> replace value from parameter
-		exprResultValue = std::move(fullResult);
+		if (fullResult.mArray.size() == 1) {
+			exprResultValue = std::move(fullResult.mArray[0]);
+		}
+		else {
+			exprResultValue = std::move(fullResult);
+		}
 		return expressionCount;
 	}
 	return 0;
 }
 
 int cfg::interpreter::interpretAndReplace(cfg::Value& cfgValueTree,
-		bool allowInterpretationWithQuotes, bool allowNameInterpretation,
+		bool allowInterpretationWithQuotes,
+		bool allowArrayElementInterpretation,
+		bool allowNameInterpretation,
 		bool allowValueInterpretation, std::ostream& errMsg)
 {
 	if (cfgValueTree.isArray()) {
-		return interpretAndReplaceExprValue(cfgValueTree,
+		int rvSum = 0;
+		if (allowArrayElementInterpretation) {
+			for (Value& element: cfgValueTree.mArray) {
+				if (element.isArray() || element.isObject()) {
+					int rv = interpretAndReplace(element,
+							allowInterpretationWithQuotes,
+							allowArrayElementInterpretation,
+							allowNameInterpretation,
+							allowValueInterpretation, errMsg);
+					if (rv == -1) {
+						return -1;
+					}
+					rvSum += rv;
+				}
+			}
+		}
+		int rv = interpretAndReplaceExprValue(cfgValueTree,
 				allowInterpretationWithQuotes, errMsg);
+		if (rv == -1) {
+			return -1;
+		}
+		rvSum += rv;
+		return rvSum;
 	}
 	if (cfgValueTree.isObject()) {
 		if (!allowNameInterpretation && !allowValueInterpretation) {
-			// --> nothing is allowed --> nothing to do
+			// --> no interpretation is allowed inside an object --> nothing to do
 			return 0;
 		}
 		int rvSum = 0;
@@ -137,8 +165,9 @@ int cfg::interpreter::interpretAndReplace(cfg::Value& cfgValueTree,
 					(nvp.mName.isArray() || nvp.mName.isObject())) {
 				int rv = interpretAndReplace(nvp.mName,
 						allowInterpretationWithQuotes,
-						allowNameInterpretation, allowValueInterpretation,
-						errMsg);
+						allowArrayElementInterpretation,
+						allowNameInterpretation,
+						allowValueInterpretation, errMsg);
 				if (rv == -1) {
 					return -1;
 				}
@@ -148,8 +177,9 @@ int cfg::interpreter::interpretAndReplace(cfg::Value& cfgValueTree,
 					(nvp.mValue.isArray() || nvp.mValue.isObject())) {
 				int rv = interpretAndReplace(nvp.mValue,
 						allowInterpretationWithQuotes,
-						allowNameInterpretation, allowValueInterpretation,
-						errMsg);
+						allowArrayElementInterpretation,
+						allowNameInterpretation,
+						allowValueInterpretation, errMsg);
 				if (rv == -1) {
 					return -1;
 				}
