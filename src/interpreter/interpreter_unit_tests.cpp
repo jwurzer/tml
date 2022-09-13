@@ -142,7 +142,8 @@ static void testTml(const std::string& tmlSource, const std::string& expected,
 }
 
 static void interpret(std::unique_ptr<cfg::TokenIterator> sourceTokens,
-		const std::vector<cfg::Value>& expected)
+		const std::vector<cfg::Value>& expected,
+		bool allowInterpretationWithQuotes)
 {
 	std::unique_ptr<cfg::Parser> parser(
 			new cfg::CfgParser(std::move(sourceTokens)));
@@ -161,7 +162,7 @@ static void interpret(std::unique_ptr<cfg::TokenIterator> sourceTokens,
 			continue;
 		}
 
-		cfg::expressions::Context context;
+		cfg::expressions::Context context(allowInterpretationWithQuotes);
 		cfg::Value interpretResult;
 		std::stringstream errMsg;
 		if (!result->interpret(context, interpretResult, errMsg)) {
@@ -188,7 +189,7 @@ static void interpretTml(const std::string& tmlSource, const cfg::Value& expecte
 	}
 	std::vector<cfg::Value> expectedResults;
 	expectedResults.push_back(expected);
-	interpret(std::move(lexer), expectedResults);
+	interpret(std::move(lexer), expectedResults, false);
 }
 
 static void interpretTml(const std::string& tmlSource, int expected)
@@ -331,7 +332,7 @@ static bool interpretAndReplace(const std::string& tmlSource)
 		std::cout << "failed" << std::endl;
 		return false;
 	}
-	int rv = cfg::interpreter::interpretAndStore(value, false);
+	int rv = cfg::interpreter::interpretAndReplaceExprValue(value, false);
 	std::string str = cfg::tmlstring::valueToString(0, value);
 	if (!str.empty() && str[str.size() - 1] == '\n') {
 		str.pop_back();

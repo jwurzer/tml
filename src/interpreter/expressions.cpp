@@ -168,7 +168,7 @@ bool cfg::expressions::CallExpression::interpret(Context& context,
 		errMsg << "result for functionname must be a text" << std::endl;
 		return false;
 	}
-	if (funcNameResult.mParseTextWithQuotes) {
+	if (!context.mAllowInterpretationWithQuotes && funcNameResult.mParseTextWithQuotes) {
 		errMsg << "functionname must be without quotes" << std::endl;
 		return false;
 	}

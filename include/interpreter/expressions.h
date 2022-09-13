@@ -15,6 +15,9 @@ namespace expressions
 	class Context
 	{
 	public:
+		Context(bool allowInterpretationWithQuotes)
+				:mAllowInterpretationWithQuotes(allowInterpretationWithQuotes) {}
+		bool mAllowInterpretationWithQuotes;
 	};
 
 	enum class ExpressionType

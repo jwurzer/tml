@@ -4,7 +4,7 @@
 //#include <cfg/cfg_string.h>
 #include <iostream>
 
-int cfg::interpreter::interpretAndStore(cfg::Value& exprResultValue,
+int cfg::interpreter::interpretAndReplaceExprValue(cfg::Value& exprResultValue,
 		bool allowInterpretationWithQuotes)
 {
 	if (!exprResultValue.isArray()) {
@@ -92,7 +92,7 @@ int cfg::interpreter::interpretAndStore(cfg::Value& exprResultValue,
 			std::cout << "error count " << errorCount << std::endl;
 			return -1;
 		}
-		expressions::Context context;
+		expressions::Context context(allowInterpretationWithQuotes);
 		cfg::Value exprResult;
 		if (!expr->interpret(context, exprResult, std::cout)) {
 			return -1;
@@ -114,7 +114,46 @@ int cfg::interpreter::interpretAndStore(cfg::Value& exprResultValue,
 		}
 		// now fullResult is finished --> replace value from parameter
 		exprResultValue = std::move(fullResult);
-		return 1;
+		return expressionCount;
+	}
+	return 0;
+}
+
+int cfg::interpreter::interpretAndReplace(cfg::Value& cfgValueTree,
+		bool allowInterpretationWithQuotes, bool allowNameInterpretation,
+		bool allowValueInterpretation)
+{
+	if (cfgValueTree.isArray()) {
+		return interpretAndReplaceExprValue(cfgValueTree,
+				allowInterpretationWithQuotes);
+	}
+	if (cfgValueTree.isObject()) {
+		if (!allowNameInterpretation && !allowValueInterpretation) {
+			// --> nothing is allowed --> nothing to do
+			return 0;
+		}
+		int rvSum = 0;
+		for (NameValuePair& nvp : cfgValueTree.mObject) {
+			if (allowNameInterpretation && nvp.mName.isArray()) {
+				int rv = interpretAndReplace(nvp.mName,
+						allowInterpretationWithQuotes,
+						allowNameInterpretation, allowValueInterpretation);
+				if (rv == -1) {
+					return -1;
+				}
+				rvSum += rv;
+			}
+			if (allowValueInterpretation && nvp.mValue.isArray()) {
+				int rv = interpretAndReplace(nvp.mValue,
+						allowInterpretationWithQuotes,
+						allowNameInterpretation, allowValueInterpretation);
+				if (rv == -1) {
+					return -1;
+				}
+				rvSum += rv;
+			}
+		}
+		return rvSum;
 	}
 	return 0;
 }
