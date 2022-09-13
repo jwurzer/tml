@@ -64,11 +64,11 @@ namespace cfg
 			return Token(TokenType::END_OF_FILE, Value{});
 		}
 
-		virtual bool movePosition(unsigned int absolutePositionIndex) {
+		virtual bool movePosition(unsigned int absolutePositionIndex) override {
 			mIndex = absolutePositionIndex;
 			return true;
 		}
-		virtual bool setRangePosition(unsigned int beginIndex, unsigned int outOfRangeIndex) {
+		virtual bool setRangePosition(unsigned int beginIndex, unsigned int outOfRangeIndex) override {
 			if (beginIndex > outOfRangeIndex || outOfRangeIndex > mTokenValues.size()) {
 				return false;
 			}
@@ -77,7 +77,7 @@ namespace cfg
 			return true;
 		}
 
-		virtual unsigned int getPosition() const { return mIndex; }
+		virtual unsigned int getPosition() const override { return mIndex; }
 
 	private:
 		std::map<char, TokenType> mPunctuators;
