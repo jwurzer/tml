@@ -10,7 +10,7 @@
 #include <json/json_string.h>
 #include <json/json_parser.h>
 #include <cfg_cppstring_example.h>
-//#include <interpreter/interpreter.h>
+#include <interpreter/interpreter.h>
 #include <interpreter/interpreter_unit_tests.h>
 
 #include <string>
@@ -45,6 +45,8 @@ namespace
 				"  printtml2cpp <filename>      ... print the tml file as cpp\n" <<
 				"  printcppexample              ... print the cpp example\n" <<
 				"  interpreter-tests            ... some unit-tests for interpreter\n" <<
+				"  interpret <filename>         ... evaluate expressions\n" <<
+				"  all-features <filename>      ... templates, variables, expressions\n" <<
 				std::endl;
 	}
 
@@ -379,6 +381,82 @@ namespace
 		std::cout << s << std::endl;
 		return 0;
 	}
+
+	int interpret(const char* filename)
+	{
+		cfg::TmlParser p(filename);
+		cfg::NameValuePair cvp;
+		if (!p.getAsTree(cvp, true, true)) {
+			std::cerr << "parse " << filename << " failed" << std::endl;
+			std::cerr << "error: " << p.getExtendedErrorMsg() << std::endl;
+			return 1;
+		}
+		cfg::Value& value = cvp.mValue;
+		std::cout << "==================== original ====================" << std::endl;
+		std::string s = cfg::tmlstring::valueToString(0, value);
+		std::cout << s << std::endl;
+
+		std::stringstream errMsg;
+		if (cfg::interpreter::interpretAndReplace(value, false, true, true, errMsg) == -1) {
+			std::cout << "=========== evaluate expressions FAILED ==========" << std::endl;
+			std::cout << errMsg.str() << std::endl;
+			return 1;
+		}
+		std::cout << "=========== after evaluate expressions ===========" << std::endl;
+		s = cfg::tmlstring::valueToString(0, value);
+		std::cout << s << std::endl;
+		return 0;
+	}
+
+	int allFeatures(const char* filename)
+	{
+		cfg::TmlParser p(filename);
+		cfg::NameValuePair cvp;
+		if (!p.getAsTree(cvp, true, true)) {
+			std::cerr << "parse " << filename << " failed" << std::endl;
+			std::cerr << "error: " << p.getExtendedErrorMsg() << std::endl;
+			return 1;
+		}
+		cfg::Value& value = cvp.mValue;
+		std::cout << "==================== original ====================" << std::endl;
+		std::string s = cfg::tmlstring::valueToString(0, value);
+		std::cout << s << std::endl;
+
+
+		std::string errorMsg;
+		std::string languageId;
+		if (!cfg::cfgtr::applyTranslations(value, "translations",
+				"tr(", languageId, errorMsg)) {
+			std::cout << "============ apply translations FAILED ===========" << std::endl;
+			std::cout << errorMsg << std::endl;
+			return 1;
+		}
+		std::cout << "============ after apply translations ============" << std::endl;
+		s = cfg::tmlstring::valueToString(0, value);
+		std::cout << s << std::endl;
+
+
+		if (!cfg::cfgtr::applyVariables(value, "variables",
+				"$(", errorMsg)) {
+			std::cout << "============= apply variables FAILED =============" << std::endl;
+			std::cout << errorMsg << std::endl;
+			return 1;
+		}
+		std::cout << "============== after apply variables =============" << std::endl;
+		s = cfg::tmlstring::valueToString(0, value);
+		std::cout << s << std::endl;
+
+		std::stringstream errMsg;
+		if (cfg::interpreter::interpretAndReplace(value, false, true, true, errMsg) == -1) {
+			std::cout << "=========== evaluate expressions FAILED ==========" << std::endl;
+			std::cout << errMsg.str() << std::endl;
+			return 1;
+		}
+		std::cout << "=========== after evaluate expressions ===========" << std::endl;
+		s = cfg::tmlstring::valueToString(0, value);
+		std::cout << s << std::endl;
+		return 0;
+	}
 }
 
 int main(int argc, char* argv[])
@@ -525,6 +603,22 @@ int main(int argc, char* argv[])
 	if (command == "interpreter-tests") {
 		cfg::interpreter::unitTests();
 		return 0;
+	}
+	if (command == "interpret") {
+		if (argc != 3) {
+			std::cerr << "interpret command need exactly one argument/filename" << std::endl;
+			printHelp(argv[0]);
+			return 1;
+		}
+		return interpret(argv[2]);
+	}
+	if (command == "all-features") {
+		if (argc != 3) {
+			std::cerr << "all-features command need exactly one argument/filename" << std::endl;
+			printHelp(argv[0]);
+			return 1;
+		}
+		return allFeatures(argv[2]);
 	}
 	std::cerr << "command '" << command << "' is not supported" << std::endl;
 	printHelp(argv[0]);

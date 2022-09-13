@@ -33,7 +33,7 @@ namespace cfg
 		 */
 		CFG_API
 		int interpretAndReplaceExprValue(cfg::Value& exprResultValue,
-				bool allowInterpretationWithQuotes);
+				bool allowInterpretationWithQuotes, std::ostream& errMsg);
 
 		/**
 		 * Interpret and replace the cfgValueTree. If one or more objects
@@ -58,7 +58,8 @@ namespace cfg
 		int interpretAndReplace(cfg::Value& cfgValueTree,
 				bool allowInterpretationWithQuotes,
 				bool allowNameInterpretation,
-				bool allowValueInterpretation);
+				bool allowValueInterpretation,
+				std::ostream& errMsg);
 	}
 }
 

@@ -2,10 +2,9 @@
 #include <interpreter/cfg_parser.h>
 #include <interpreter/cfg_lexer.h>
 //#include <cfg/cfg_string.h>
-#include <iostream>
 
 int cfg::interpreter::interpretAndReplaceExprValue(cfg::Value& exprResultValue,
-		bool allowInterpretationWithQuotes)
+		bool allowInterpretationWithQuotes, std::ostream& errMsg)
 {
 	if (!exprResultValue.isArray()) {
 		// nothing to do
@@ -70,7 +69,7 @@ int cfg::interpreter::interpretAndReplaceExprValue(cfg::Value& exprResultValue,
 			}
 		}
 		if (parenCount > 0) {
-			std::cout << "Can't find ending" << std::endl;
+			errMsg << "Can't find ending" << std::endl;
 			return -1;
 		}
 		if (!parser->getTokenIterator().setRangePosition(curStartIndex, i)) {
@@ -89,19 +88,19 @@ int cfg::interpreter::interpretAndReplaceExprValue(cfg::Value& exprResultValue,
 		unsigned int errorCount = 0;
 		std::unique_ptr<expressions::Expression> expr = parser->parseFullExpression(errorCount);
 		if (errorCount) {
-			std::cout << "error count " << errorCount << std::endl;
+			errMsg << "error count " << errorCount << std::endl;
 			return -1;
 		}
 		expressions::Context context(allowInterpretationWithQuotes);
 		cfg::Value exprResult;
-		if (!expr->interpret(context, exprResult, std::cout)) {
+		if (!expr->interpret(context, exprResult, errMsg)) {
 			return -1;
 		}
 		fullResult.mArray.push_back(std::move(exprResult));
 
 		unsigned int newTokenPosition = parser->getTokenIterator().getPosition();
 		if (newTokenPosition != i) {
-			std::cout << "wrong internal state" << std::endl;
+			errMsg << "wrong internal state" << std::endl;
 			return -1;
 		}
 		//std::cout << "parsed from " << curStartIndex << " to " << (newTokenPosition - 1) << std::endl;
@@ -121,11 +120,11 @@ int cfg::interpreter::interpretAndReplaceExprValue(cfg::Value& exprResultValue,
 
 int cfg::interpreter::interpretAndReplace(cfg::Value& cfgValueTree,
 		bool allowInterpretationWithQuotes, bool allowNameInterpretation,
-		bool allowValueInterpretation)
+		bool allowValueInterpretation, std::ostream& errMsg)
 {
 	if (cfgValueTree.isArray()) {
 		return interpretAndReplaceExprValue(cfgValueTree,
-				allowInterpretationWithQuotes);
+				allowInterpretationWithQuotes, errMsg);
 	}
 	if (cfgValueTree.isObject()) {
 		if (!allowNameInterpretation && !allowValueInterpretation) {
@@ -134,19 +133,23 @@ int cfg::interpreter::interpretAndReplace(cfg::Value& cfgValueTree,
 		}
 		int rvSum = 0;
 		for (NameValuePair& nvp : cfgValueTree.mObject) {
-			if (allowNameInterpretation && nvp.mName.isArray()) {
+			if (allowNameInterpretation &&
+					(nvp.mName.isArray() || nvp.mName.isObject())) {
 				int rv = interpretAndReplace(nvp.mName,
 						allowInterpretationWithQuotes,
-						allowNameInterpretation, allowValueInterpretation);
+						allowNameInterpretation, allowValueInterpretation,
+						errMsg);
 				if (rv == -1) {
 					return -1;
 				}
 				rvSum += rv;
 			}
-			if (allowValueInterpretation && nvp.mValue.isArray()) {
+			if (allowValueInterpretation &&
+					(nvp.mValue.isArray() || nvp.mValue.isObject())) {
 				int rv = interpretAndReplace(nvp.mValue,
 						allowInterpretationWithQuotes,
-						allowNameInterpretation, allowValueInterpretation);
+						allowNameInterpretation, allowValueInterpretation,
+						errMsg);
 				if (rv == -1) {
 					return -1;
 				}

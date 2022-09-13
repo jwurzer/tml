@@ -332,7 +332,7 @@ static bool interpretAndReplace(const std::string& tmlSource)
 		std::cout << "failed" << std::endl;
 		return false;
 	}
-	int rv = cfg::interpreter::interpretAndReplaceExprValue(value, false);
+	int rv = cfg::interpreter::interpretAndReplaceExprValue(value, false, std::cout);
 	std::string str = cfg::tmlstring::valueToString(0, value);
 	if (!str.empty() && str[str.size() - 1] == '\n') {
 		str.pop_back();

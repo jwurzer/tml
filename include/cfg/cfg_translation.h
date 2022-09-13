@@ -22,6 +22,49 @@ namespace cfg
 		 */
 		typedef std::map<std::string /* language id */, TranslationMap> LanguageMap;
 
+		/**
+		 * Apply all translations. Load translations with addTranslations()
+		 * and use the translations with useTranslations().
+		 * The translations object with its translations is removed.
+		 *
+		 * @param cfgValue This cfg value must also include the translations object.
+		 *        Also the other name-value-pairs with the translations should
+		 *        be included.
+		 * @param translationsKeyword name of the translations object.
+		 *        e.g. "translations"
+		 * @param replaceKeyword keyword prefix for translation-id. e.g. "tr("
+		 * @param languageId Define which languageId should be used.
+		 *        If empty, first languageId is used. The used
+		 *        language id is stored in this case into this parameter.
+		 * @param outErrorMsg
+		 * @return True for success. Otherwise false.
+		 */
+		CFG_API
+		bool applyTranslations(Value& cfgValue,
+				const std::string& translationsKeyword,
+				const std::string& replaceKeyword,
+				std::string& languageId, std::string& outErrorMsg);
+
+		/**
+		 * Apply all variables. Load variables with addVariables()
+		 * and use the variables with useTranslations() with languageId "".
+		 * The variables object with its variables is removed.
+		 *
+		 * @param cfgValue This cfg value must also include the variables object.
+		 *        Also the other name-value-pairs with the variables should
+		 *        be included.
+		 * @param variablesKeyword name of the variables object.
+		 *        e.g. "variables"
+		 * @param replaceKeyword keyword prefix for variable-id. e.g. "$("
+		 * @param outErrorMsg
+		 * @return True for success. Otherwise false.
+		 */
+		CFG_API
+		bool applyVariables(Value& cfgValue,
+				const std::string& variablesKeyword,
+				const std::string& replaceKeyword,
+				std::string& outErrorMsg);
+
 		CFG_API
 		bool addTranslations(LanguageMap& languageMap,
 				Value& cfgValue, bool removeTranslationsFromCfgValue,

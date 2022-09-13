@@ -21,7 +21,7 @@ namespace
 	 * @param outErrorMsg
 	 * @return
 	 */
-	bool applyTranslations(const TranslationMap& translationMap,
+	bool replaceTranslationIds(const TranslationMap& translationMap,
 			const std::string& replaceKeyword,
 			int currentRecursiveReplaceDeep,
 			Value& cfgValue,
@@ -55,8 +55,8 @@ namespace
 			// copy the value to replace the translation holder with the correct value.
 			cfgValue = it->second.mValue;
 			// the replaced translation can also have a translations as value
-			// --> call applyTranslations() for the replaced translation
-			if (!applyTranslations(translationMap, replaceKeyword,
+			// --> call replaceTranslationIds() for the replaced translation
+			if (!replaceTranslationIds(translationMap, replaceKeyword,
 					currentRecursiveReplaceDeep + 1,
 					cfgValue, outErrorMsg)) {
 				return false;
@@ -71,7 +71,7 @@ namespace
 				// Its not a replacement of a replacement.
 				// Don't use 0 for currentRecursiveReplaceDeep to check
 				// indirect recursive replacements.
-				if (!applyTranslations(translationMap, replaceKeyword,
+				if (!replaceTranslationIds(translationMap, replaceKeyword,
 						currentRecursiveReplaceDeep, v, outErrorMsg)) {
 					return false;
 				}
@@ -87,11 +87,11 @@ namespace
 				// Don't use 0 for currentRecursiveReplaceDeep to check
 				// indirect recursive replacements.
 				// Now apply the translations for the name and value of each object.
-				if (!applyTranslations(translationMap, replaceKeyword,
+				if (!replaceTranslationIds(translationMap, replaceKeyword,
 						currentRecursiveReplaceDeep, nv.mName, outErrorMsg)) {
 					return false;
 				}
-				if (!applyTranslations(translationMap, replaceKeyword,
+				if (!replaceTranslationIds(translationMap, replaceKeyword,
 						currentRecursiveReplaceDeep, nv.mValue, outErrorMsg)) {
 					return false;
 				}
@@ -103,6 +103,45 @@ namespace
 	}
 }
 }
+}
+
+bool cfg::cfgtr::applyTranslations(Value& cfgValue,
+		const std::string& translationsKeyword,
+		const std::string& replaceKeyword,
+		std::string& languageId, std::string& outErrorMsg)
+{
+	LanguageMap languageMap;
+	if (!addTranslations(languageMap, cfgValue, true,
+			translationsKeyword, outErrorMsg)) {
+		return false;
+	}
+	if (languageMap.empty()) {
+		// --> nothing to do
+		return true;
+	}
+	if (languageId.empty()) {
+		languageId = languageMap.begin()->first;
+	}
+	return useTranslations(languageMap, languageId, replaceKeyword,
+			cfgValue, outErrorMsg);
+}
+
+bool cfg::cfgtr::applyVariables(Value& cfgValue,
+		const std::string& variablesKeyword,
+		const std::string& replaceKeyword,
+		std::string& outErrorMsg)
+{
+	LanguageMap languageMap;
+	if (!addVariables(languageMap, cfgValue, true,
+			variablesKeyword, outErrorMsg)) {
+		return false;
+	}
+	if (languageMap.empty()) {
+		// --> nothing to do
+		return true;
+	}
+	return useTranslations(languageMap, "", replaceKeyword,
+			cfgValue, outErrorMsg);
 }
 
 bool cfg::cfgtr::addTranslations(LanguageMap& languageMap,
@@ -254,6 +293,6 @@ bool cfg::cfgtr::useTranslations(const TranslationMap& translationMap,
 		const std::string& replaceKeyword, Value& cfgValue,
 		std::string& outErrorMsg)
 {
-	return applyTranslations(translationMap, replaceKeyword, 0,
+	return replaceTranslationIds(translationMap, replaceKeyword, 0,
 			cfgValue, outErrorMsg);
 }
