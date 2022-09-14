@@ -189,7 +189,7 @@ namespace
 		}
 
 		if (!cfg::cfgtr::useTranslations(languageMap,
-				langPrefix, "tr(", value, errorMsg)) {
+				langPrefix, "tr(", true, value, errorMsg)) {
 			std::cout << errorMsg << " for language: " << langPrefix << std::endl;
 			return false;
 		}
@@ -240,7 +240,7 @@ namespace
 		}
 
 		if (!cfg::cfgtr::useTranslations(languageMap,
-				"", "$(", value, errorMsg)) {
+				"", "$(", true, value, errorMsg)) {
 			std::cout << errorMsg << " for variables" << std::endl;
 			return false;
 		}

@@ -17,6 +17,16 @@ namespace
 	 *        This has nothing to do with the current deep of the
 	 *        "value tree". This deep value is only for the recursive
 	 *        replacement of translations.
+	 * @param flatArrayVariableIntoArray Example: VAR is 'aa bb cc'.
+	 * If true then 'ww xx $(VAR) yy zz' is replaced to 'ww xx aa bb cc yy zz'.
+	 * If false then 'ww xx $(VAR) yy zz' is replaced to '
+	 * []
+	 *     ww
+	 *     xx
+	 *     aa bb cc
+	 *     yy
+	 *     zz
+	 * '.
 	 * @param cfgValue
 	 * @param outErrorMsg
 	 * @return
@@ -24,6 +34,7 @@ namespace
 	bool replaceTranslationIds(const TranslationMap& translationMap,
 			const std::string& replaceKeyword,
 			int currentRecursiveReplaceDeep,
+			bool flatArrayVariableIntoArray,
 			Value& cfgValue,
 			std::string& outErrorMsg)
 	{
@@ -58,6 +69,7 @@ namespace
 			// --> call replaceTranslationIds() for the replaced translation
 			if (!replaceTranslationIds(translationMap, replaceKeyword,
 					currentRecursiveReplaceDeep + 1,
+					flatArrayVariableIntoArray,
 					cfgValue, outErrorMsg)) {
 				return false;
 			}
@@ -65,15 +77,33 @@ namespace
 		}
 
 		if (cfgValue.isArray()) {
-			for (Value& v : cfgValue.mArray) {
+			std::size_t count = cfgValue.mArray.size();
+			for (std::size_t i = 0; i < count; ++i) {
+				Value& v = cfgValue.mArray[i];
+				bool isArrayBefore = v.isArray();
 				// No +1 for currentRecursiveReplaceDeep because its
 				// no new recursive replacement.
 				// Its not a replacement of a replacement.
 				// Don't use 0 for currentRecursiveReplaceDeep to check
 				// indirect recursive replacements.
 				if (!replaceTranslationIds(translationMap, replaceKeyword,
-						currentRecursiveReplaceDeep, v, outErrorMsg)) {
+						currentRecursiveReplaceDeep, flatArrayVariableIntoArray,
+						v, outErrorMsg)) {
 					return false;
+				}
+				if (flatArrayVariableIntoArray && !isArrayBefore && v.isArray()) {
+					Value tmp = std::move(v);
+					std::size_t insertCount = tmp.mArray.size();
+					cfgValue.mArray.erase(cfgValue.mArray.begin() + i);
+					cfgValue.mArray.insert(cfgValue.mArray.begin() + i, tmp.mArray.begin(), tmp.mArray.end());
+					// integer underflow can happen for insertCount - 1 but is ok.
+					// If insertCount is 0 then an underflow happened.
+					// But ++i from the for() loop reverses this underflow.
+					// Also if i is 0.
+					// --> has no bad effect.
+					i += insertCount - 1;
+					// after erase and insert the variable count must be updated!
+					count = cfgValue.mArray.size();
 				}
 			}
 			return true;
@@ -88,11 +118,15 @@ namespace
 				// indirect recursive replacements.
 				// Now apply the translations for the name and value of each object.
 				if (!replaceTranslationIds(translationMap, replaceKeyword,
-						currentRecursiveReplaceDeep, nv.mName, outErrorMsg)) {
+						currentRecursiveReplaceDeep,
+						flatArrayVariableIntoArray,
+						nv.mName, outErrorMsg)) {
 					return false;
 				}
 				if (!replaceTranslationIds(translationMap, replaceKeyword,
-						currentRecursiveReplaceDeep, nv.mValue, outErrorMsg)) {
+						currentRecursiveReplaceDeep,
+						flatArrayVariableIntoArray,
+						nv.mValue, outErrorMsg)) {
 					return false;
 				}
 			}
@@ -123,7 +157,7 @@ bool cfg::cfgtr::applyTranslations(Value& cfgValue,
 		languageId = languageMap.begin()->first;
 	}
 	return useTranslations(languageMap, languageId, replaceKeyword,
-			cfgValue, outErrorMsg);
+			true, cfgValue, outErrorMsg);
 }
 
 bool cfg::cfgtr::applyVariables(Value& cfgValue,
@@ -141,7 +175,7 @@ bool cfg::cfgtr::applyVariables(Value& cfgValue,
 		return true;
 	}
 	return useTranslations(languageMap, "", replaceKeyword,
-			cfgValue, outErrorMsg);
+			true, cfgValue, outErrorMsg);
 }
 
 bool cfg::cfgtr::addTranslations(LanguageMap& languageMap,
@@ -279,20 +313,22 @@ bool cfg::cfgtr::addVariables(LanguageMap& languageMap,
 
 bool cfg::cfgtr::useTranslations(const LanguageMap& languageMap,
 		const std::string& languageId, const std::string& replaceKeyword,
-		Value& cfgValue, std::string& outErrorMsg)
+		bool flatArrayVariableIntoArray, Value& cfgValue,
+		std::string& outErrorMsg)
 {
 	LanguageMap::const_iterator it = languageMap.find(languageId);
 	if (it == languageMap.end()) {
 		outErrorMsg = "Can't find translation map for language id '" + languageId + "'";
 		return false;
 	}
-	return useTranslations(it->second, replaceKeyword, cfgValue, outErrorMsg);
+	return useTranslations(it->second, replaceKeyword,
+			flatArrayVariableIntoArray, cfgValue, outErrorMsg);
 }
 
 bool cfg::cfgtr::useTranslations(const TranslationMap& translationMap,
-		const std::string& replaceKeyword, Value& cfgValue,
-		std::string& outErrorMsg)
+		const std::string& replaceKeyword, bool flatArrayVariableIntoArray,
+		Value& cfgValue, std::string& outErrorMsg)
 {
 	return replaceTranslationIds(translationMap, replaceKeyword, 0,
-			cfgValue, outErrorMsg);
+			flatArrayVariableIntoArray, cfgValue, outErrorMsg);
 }

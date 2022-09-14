@@ -106,6 +106,16 @@ namespace cfg
 		 *        the end of the replaceKeyword. Everything which start
 		 *        with the replaceKeyword, e.g. "tr(", and end with ")" is
 		 *        replaced with the entry of the translationMap.
+		 * @param flatArrayVariableIntoArray Example: VAR is 'aa bb cc'.
+		 *        If true then 'ww xx $(VAR) yy zz' is replaced to 'ww xx aa bb cc yy zz'.
+		 *        If false then 'ww xx $(VAR) yy zz' is replaced to '
+		 *        []
+		 *            ww
+		 *            xx
+		 *            aa bb cc
+		 *            yy
+		 *            zz
+		 *        '.
 		 * @param cfgValue value which should be replaced
 		 * @param outErrorMsg Store a error message if an error happened.
 		 * @return True for success. False for error.
@@ -114,6 +124,7 @@ namespace cfg
 		bool useTranslations(const LanguageMap& languageMap,
 				const std::string& languageId,
 				const std::string& replaceKeyword,
+				bool flatArrayVariableIntoArray,
 				Value& cfgValue,
 				std::string& outErrorMsg);
 
@@ -122,10 +133,21 @@ namespace cfg
 		 *        the end of the replaceKeyword. Everything which start
 		 *        with the replaceKeyword, e.g. "tr(", and end with ")" is
 		 *        replaced with the entry of the translationMap.
+		 * @param flatArrayVariableIntoArray Example: VAR is 'aa bb cc'.
+		 *        If true then 'ww xx $(VAR) yy zz' is replaced to 'ww xx aa bb cc yy zz'.
+		 *        If false then 'ww xx $(VAR) yy zz' is replaced to '
+		 *        []
+		 *            ww
+		 *            xx
+		 *            aa bb cc
+		 *            yy
+		 *            zz
+		 *        '.
 		 */
 		CFG_API
 		bool useTranslations(const TranslationMap& translationMap,
 				const std::string& replaceKeyword,
+				bool flatArrayVariableIntoArray,
 				Value& cfgValue, std::string& outErrorMsg);
 	}
 }
