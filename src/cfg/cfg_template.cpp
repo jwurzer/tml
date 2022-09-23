@@ -92,6 +92,105 @@ namespace cfg
 			}
 
 			/**
+			 * @note Some parts of this function are very simular to
+			 * cfg::interpreter::interpretAndReplaceExprValue().
+			 * @param tmpResult Only filled if return value is > 0.
+			 * @return -1 for error. 0 for no expressions. >0 for expression count
+			 */
+			int getParameterValues(const std::vector<Value>& array,
+					cfg::Value& tmpResult, bool allowInterpretationWithQuotes,
+					std::string& outErrMsg)
+			{
+				std::size_t count = array.size();
+				if (count < 2) {
+					return -1;
+				}
+				tmpResult.setArray();
+				unsigned int expressionCount = 0;
+				// nextStartIndex ... next start for an expression
+				unsigned int nextStartIndex = 2;
+				for (unsigned int i = 3; i < count; ++i) {
+					if (i <= nextStartIndex) {
+						// should not be possible
+						continue;
+					}
+					// --> i > nextStartIndex --> i can only be >= 3
+					const cfg::Value& val = array[i];
+					if (!val.isText() || val.mText != "(" ||
+							(!allowInterpretationWithQuotes && val.mParseTextWithQuotes)) {
+						continue;
+					}
+					const cfg::Value& prev = array[i - 1];
+					if (!prev.isText()) {
+						continue;
+					}
+					if (prev.mText != "_i" && prev.mText != "_ii" &&
+							prev.mText != "_fi" && prev.mText != "_ti") {
+						continue;
+					}
+					if (!allowInterpretationWithQuotes && prev.mParseTextWithQuotes) {
+						continue;
+					}
+					// --> expression for interpreter start with
+					// '_i (',  '_ii (',  '_fi ('  or  '_ti ('
+					++expressionCount;
+					unsigned int curStartIndex = i - 1;
+
+					// ci ... copy index
+					for (unsigned int ci = nextStartIndex; ci < curStartIndex; ++ci) {
+						// without std::move() because we doesn't want change the original input.
+						// Because if an error happened parameter array should be unchanged.
+						//std::cout << "copy " << ci << std::endl;
+						tmpResult.mArray.push_back(array[ci]);
+					}
+
+					int parenCount = 1;
+					for (++i; i < count && parenCount > 0; ++i) {
+						const cfg::Value& next = array[i];
+						if (next.isText() && !next.mParseTextWithQuotes && next.mText.size() == 1) {
+							char ch = next.mText[0];
+							if (ch == '(') {
+								++parenCount;
+							}
+							else if (ch == ')') {
+								--parenCount;
+							}
+						}
+					}
+					if (parenCount > 0) {
+						outErrMsg = "Can't find ending";
+						return -1;
+					}
+
+					nextStartIndex = i;
+
+					// other loop make ++i --> --i would "normally" be necessary here.
+					// But not necessary because start sequence for interpreter takes
+					// to token like '_i (',  '_ii (',  '_fi ('  or  '_ti ('
+					// not necessary: --i;
+
+					Value expr;
+					expr.setArray();
+
+					// ci ... copy index
+					for (unsigned int ci = curStartIndex; ci < nextStartIndex; ++ci) {
+						expr.mArray.push_back(array[ci]);
+					}
+					tmpResult.mArray.push_back(expr);
+				}
+
+				if (expressionCount > 0) {
+					for (unsigned int ci = nextStartIndex; ci < count; ++ci) {
+						// also here no std::move()
+						//std::cout << "finish copy " << ci << std::endl;
+						tmpResult.mArray.push_back(array[ci]);
+					}
+					return expressionCount;
+				}
+				return 0;
+			}
+
+			/**
 			 * Get the template
 			 * @param templateMap Map of all templates
 			 * @param cfgValue Value which includes the "use-template" reference
@@ -105,6 +204,8 @@ namespace cfg
 			 */
 			const CfgTemplate* getTemplate(const TemplateMap& templateMap,
 					const Value& cfgValue,
+					bool checkForInterpreterExpressions,
+					bool allowInterpretationWithQuotes,
 					ParameterMap& parameterMap,
 					std::string& outErrorMsg)
 			{
@@ -125,10 +226,33 @@ namespace cfg
 							"' not found";
 					return nullptr;
 				}
-				if (it->second.getParameterCount() + 2 != cnt) {
+				const Value* paramValues = cfgValue.mArray.data() + 2;
+				std::size_t paramValueCount = cnt - 2;
+				Value tmpResult;
+
+				if (checkForInterpreterExpressions) {
+					std::string exprErrMsg;
+					int rv = getParameterValues(cfgValue.mArray,
+							tmpResult, allowInterpretationWithQuotes,
+							exprErrMsg);
+					if (rv == -1) {
+						outErrorMsg =
+								cfgValue.mArray[1].getFilenameAndPosition() +
+										": " + exprErrMsg;
+						return nullptr;
+					}
+					if (rv > 0) {
+						paramValues = tmpResult.mArray.data();
+						paramValueCount = tmpResult.mArray.size();
+					}
+				}
+
+				if (it->second.getParameterCount() != paramValueCount) {
 					outErrorMsg = cfgValue.mArray[1].getFilenameAndPosition() +
 							": wrong parameter count for template '" +
-							cfgValue.mArray[1].mText + "'";
+							cfgValue.mArray[1].mText + "' must be: " +
+							std::to_string(it->second.getParameterCount()) +
+							", is: " + std::to_string(paramValueCount);
 					return nullptr;
 				}
 				parameterMap.clear();
@@ -136,8 +260,8 @@ namespace cfg
 				std::size_t paramCount = params.size();
 				for (std::size_t i = 0; i < paramCount; ++i) {
 					if (!parameterMap.insert(ParameterMap::value_type(
-							params[i], cfgValue.mArray[2 + i])).second) {
-						outErrorMsg = cfgValue.mArray[2 + i].getFilenameAndPosition() +
+							params[i], paramValues[i])).second) {
+						outErrorMsg = paramValues[i].getFilenameAndPosition() +
 								": create parameter map failed";
 						return nullptr;
 					}
@@ -149,6 +273,8 @@ namespace cfg
 					std::vector<NameValuePair>& pairs,
 					int pairStartIndex, int pairCount,
 					const std::string& keywordForUsingTemplate,
+					bool checkForInterpreterExpressions,
+					bool allowInterpretationWithQuotes,
 					int currentRecursiveReplaceDeep,
 					std::vector<std::string>& templateNameStack,
 					int& outPairAddRemoveCount, std::string& outErrorMsg);
@@ -179,6 +305,8 @@ namespace cfg
 			int replaceTemplate(const TemplateMap& templateMap,
 					std::vector<NameValuePair>& pairs, std::size_t index,
 					const std::string& keywordForUsingTemplate,
+					bool checkForInterpreterExpressions,
+					bool allowInterpretationWithQuotes,
 					int currentRecursiveReplaceDeep,
 					std::vector<std::string>& templateNameStack,
 					std::string& outErrorMsg)
@@ -186,7 +314,10 @@ namespace cfg
 				NameValuePair& nvp = pairs[index];
 				ParameterMap parameterMap;
 				const CfgTemplate* cfgTemp = getTemplate(templateMap,
-						nvp.mName, parameterMap, outErrorMsg);
+						nvp.mName,
+						checkForInterpreterExpressions,
+						allowInterpretationWithQuotes,
+						parameterMap, outErrorMsg);
 				if (!cfgTemp) {
 					return -1;
 				}
@@ -224,8 +355,12 @@ namespace cfg
 				int pairAddRemoveCount = 0;
 				templateNameStack.push_back(tempName);
 				if (!applyTemplates(templateMap, pairs, index, tmpPairs.size(),
-						keywordForUsingTemplate, currentRecursiveReplaceDeep + 1,
-						templateNameStack, pairAddRemoveCount, outErrorMsg)) {
+						keywordForUsingTemplate,
+						checkForInterpreterExpressions,
+						allowInterpretationWithQuotes,
+						currentRecursiveReplaceDeep + 1,
+						templateNameStack,
+						pairAddRemoveCount, outErrorMsg)) {
 					templateNameStack.pop_back();
 					return -1;
 				}
@@ -257,6 +392,8 @@ namespace cfg
 			 */
 			bool replaceSimpleTemplate(const TemplateMap& templateMap, Value& cfgValue,
 					const std::string& keywordForUsingTemplate,
+					bool checkForInterpreterExpressions,
+					bool allowInterpretationWithQuotes,
 					int currentRecursiveReplaceDeep,
 					std::vector<std::string>& templateNameStack,
 					std::string& outErrorMsg) {
@@ -268,7 +405,10 @@ namespace cfg
 
 				ParameterMap parameterMap;
 				const CfgTemplate* cfgTemp = getTemplate(templateMap,
-						cfgValue, parameterMap, outErrorMsg);
+						cfgValue,
+						checkForInterpreterExpressions,
+						allowInterpretationWithQuotes,
+						parameterMap, outErrorMsg);
 				if (!cfgTemp) {
 					return false;
 				}
@@ -334,6 +474,8 @@ namespace cfg
 					templateNameStack.push_back(tempName);
 					if (!replaceSimpleTemplate(templateMap, cfgValue,
 							keywordForUsingTemplate,
+							checkForInterpreterExpressions,
+							allowInterpretationWithQuotes,
 							currentRecursiveReplaceDeep + 1,
 							templateNameStack, outErrorMsg)) {
 						templateNameStack.pop_back();
@@ -372,6 +514,8 @@ namespace cfg
 					std::vector<NameValuePair>& pairs,
 					int pairStartIndex, int pairCount,
 					const std::string& keywordForUsingTemplate,
+					bool checkForInterpreterExpressions,
+					bool allowInterpretationWithQuotes,
 					int currentRecursiveReplaceDeep,
 					std::vector<std::string>& templateNameStack,
 					int& outPairAddRemoveCount, std::string& outErrorMsg)
@@ -400,7 +544,10 @@ namespace cfg
 						int pairDiffCount = 0;
 						std::vector<std::string> tempStack;
 						if (!applyTemplates(templateMap, nvp->mValue.mObject,
-								-1, -1, keywordForUsingTemplate, 0, tempStack,
+								-1, -1, keywordForUsingTemplate,
+								checkForInterpreterExpressions,
+								allowInterpretationWithQuotes,
+								0, tempStack,
 								pairDiffCount, outErrorMsg)) {
 							return false;
 						}
@@ -411,8 +558,11 @@ namespace cfg
 							// full replacment with none, one or more name-value-pairs are allowed
 							int insertCnt = replaceTemplate(templateMap, pairs,
 									i, keywordForUsingTemplate,
+									checkForInterpreterExpressions,
+									allowInterpretationWithQuotes,
 									currentRecursiveReplaceDeep,
-									templateNameStack, outErrorMsg);
+									templateNameStack,
+									outErrorMsg);
 							if (insertCnt < 0) {
 								return false;
 							}
@@ -472,6 +622,8 @@ namespace cfg
 							// only a simple replacement is allowed
 							if (!replaceSimpleTemplate(templateMap, nvp->mName,
 									keywordForUsingTemplate,
+									checkForInterpreterExpressions,
+									allowInterpretationWithQuotes,
 									currentRecursiveReplaceDeep,
 									templateNameStack, outErrorMsg)) {
 								return false;
@@ -487,6 +639,8 @@ namespace cfg
 						// only a simple replacement is allowed
 						if (!replaceSimpleTemplate(templateMap, nvp->mValue,
 								keywordForUsingTemplate,
+								checkForInterpreterExpressions,
+								allowInterpretationWithQuotes,
 								currentRecursiveReplaceDeep,
 								templateNameStack, outErrorMsg)) {
 							return false;
@@ -667,11 +821,14 @@ bool cfg::cfgtemp::useTemplates(const TemplateMap& templateMap, Value& cfgValue,
 		const std::string& useTemplateKeyword)
 {
 	std::string errorMsg;
-	return useTemplates(templateMap, cfgValue, useTemplateKeyword, errorMsg);
+	return useTemplates(templateMap, cfgValue, useTemplateKeyword, false, false, errorMsg);
 }
 
 bool cfg::cfgtemp::useTemplates(const TemplateMap& templateMap, Value& cfgValue,
-		const std::string& useTemplateKeyword, std::string& outErrorMsg)
+		const std::string& useTemplateKeyword,
+		bool checkForInterpreterExpressions,
+		bool allowInterpretationWithQuotes,
+		std::string& outErrorMsg)
 {
 	if (!cfgValue.isObject()) {
 		return true;
@@ -679,6 +836,8 @@ bool cfg::cfgtemp::useTemplates(const TemplateMap& templateMap, Value& cfgValue,
 	int pairDiffCount = 0;
 	std::vector<std::string> templateNameStack;
 	return applyTemplates(templateMap, cfgValue.mObject, -1, -1,
-			useTemplateKeyword, 0, templateNameStack, pairDiffCount,
-			outErrorMsg);
+			useTemplateKeyword,
+			checkForInterpreterExpressions, allowInterpretationWithQuotes,
+			0, templateNameStack,
+			pairDiffCount, outErrorMsg);
 }

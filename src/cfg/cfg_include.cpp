@@ -367,7 +367,7 @@ bool cfg::inc::loadAndIncludeFiles(Value& outValue, TFileMap& outIncludedFiles,
 	std::string outFullFilename;
 	if (!loader.loadAndPush(outValue, outFullFilename, filename,
 			inclEmptyLines, inclComments, outErrorMsg)) {
-		outErrorMsg = ": load " + filename + " failed";
+		outErrorMsg += ": load " + filename + " failed";
 		outValue.clear();
 		return false;
 	}

@@ -70,6 +70,22 @@ namespace cfg
 
 		/**
 		 * Replace the "use-template" references with the referenced templates.
+		 * @param checkForInterpreterExpressions Should only be set to true
+		 *        if after template replacement also the interpreter is used.
+		 *        useTemplates never uses the interpreter. If true it only
+		 *        group the expressions for the parameters. This means if
+		 *        true then the parameters can have interpreter expression
+		 *        which can start with '_i (',  '_ii (',  '_fi ('  or  '_ti ('.
+		 * @param allowInterpretationWithQuotes Only used if
+		 *        checkForInterpreterExpressions is true. Otherwise ignored.
+		 *        In this case (ignored) simply set it to false.
+		 *        If source is parsed from a JSON file then this should be true.
+		 *        If source is parsed from a TML file then this should be false.
+		 *        For TML true would also work but then something like this
+		 *        is interpreted: "abs" "(" -123 ")"  -->  123
+		 *        If false then this would be unchanged.
+		 *        If false then the example for interpretation must look like this:
+		 *        abs ( -123 )  -->  123
 		 * @return Return false if a syntax error happend
 		 *         (wrong referenced template, wrong parameter count, ...).
 		 *         True for success. True is also returned if no template
@@ -77,7 +93,10 @@ namespace cfg
 		 */
 		CFG_API
 		bool useTemplates(const TemplateMap& templateMap, Value& cfgValue,
-				const std::string& useTemplateKeyword, std::string& outErrorMsg);
+				const std::string& useTemplateKeyword,
+				bool checkForInterpreterExpressions,
+				bool allowInterpretationWithQuotes,
+				std::string& outErrorMsg);
 	}
 }
 
