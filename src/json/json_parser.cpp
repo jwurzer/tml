@@ -18,25 +18,25 @@ namespace cfg
 		int u8_wc_toutf8(char *dest, uint32_t ch)
 		{
 			if (ch < 0x80) {
-				dest[0] = (char)ch;
+				dest[0] = static_cast<char>(ch);
 				return 1;
 			}
 			if (ch < 0x800) {
-				dest[0] = (ch>>6) | 0xC0;
-				dest[1] = (ch & 0x3F) | 0x80;
+				dest[0] = static_cast<char>((ch>>6) | 0xC0);
+				dest[1] = static_cast<char>((ch & 0x3F) | 0x80);
 				return 2;
 			}
 			if (ch < 0x10000) {
-				dest[0] = (ch>>12) | 0xE0;
-				dest[1] = ((ch>>6) & 0x3F) | 0x80;
-				dest[2] = (ch & 0x3F) | 0x80;
+				dest[0] = static_cast<char>((ch>>12) | 0xE0);
+				dest[1] = static_cast<char>(((ch>>6) & 0x3F) | 0x80);
+				dest[2] = static_cast<char>((ch & 0x3F) | 0x80);
 				return 3;
 			}
 			if (ch < 0x110000) {
-				dest[0] = (ch>>18) | 0xF0;
-				dest[1] = ((ch>>12) & 0x3F) | 0x80;
-				dest[2] = ((ch>>6) & 0x3F) | 0x80;
-				dest[3] = (ch & 0x3F) | 0x80;
+				dest[0] = static_cast<char>((ch>>18) | 0xF0);
+				dest[1] = static_cast<char>(((ch>>12) & 0x3F) | 0x80);
+				dest[2] = static_cast<char>(((ch>>6) & 0x3F) | 0x80);
+				dest[3] = static_cast<char>((ch & 0x3F) | 0x80);
 				return 4;
 			}
 			return 0;
@@ -102,7 +102,7 @@ namespace cfg
 									isxdigit(hexStr[2]) && isxdigit(hexStr[3])) {
 								long unicode = strtol(hexStr, nullptr, 16);
 								char dest[5];
-								int cnt = u8_wc_toutf8(dest, unicode);
+								int cnt = u8_wc_toutf8(dest, static_cast<uint32_t>(unicode));
 								dest[cnt] = '\0';
 								text += dest;
 							}

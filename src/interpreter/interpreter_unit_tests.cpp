@@ -355,9 +355,9 @@ static bool interpretAndReplaceTests()
 bool cfg::interpreter::unitTests()
 {
 	bool rv = true;
-	//rv = testsWithLexer() && rv;
-	//rv = testsWithCfgLexer() && rv;
-	//rv = interpretWithCfgLexer() && rv;
+	rv = testsWithLexer() && rv;
+	rv = testsWithCfgLexer() && rv;
+	rv = interpretWithCfgLexer() && rv;
 	rv = interpretAndReplaceTests() && rv;
 	return rv;
 }
