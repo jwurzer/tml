@@ -135,7 +135,7 @@ namespace
 		std::cout << s << std::endl;
 		std::cout << "============================================" << std::endl;
 		outErrorMsg.clear();
-		if (!cfg::cfgtemp::useTemplates(templateMap, cvp.mValue, "use-template", outErrorMsg)) {
+		if (!cfg::cfgtemp::useTemplates(templateMap, cvp.mValue, "use-template", true, false, outErrorMsg)) {
 			std::cerr << "error: " << outErrorMsg << std::endl;
 			return 1;
 		}
