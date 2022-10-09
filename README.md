@@ -69,6 +69,38 @@ Objects can be nested like the following example:
 
 TML also supports templates (prefabs) and special name-value pairs. For more details see the [TML Specification](tml-specification.md) file.
 
+## Compilation
+
+### Linux
+
+Install g++ make cmake
+
+```
+tml$ make
+```
+
+### Windows
+
+Install Visual Studio 2022
+
+Install CMake
+
+Open "Developer Command Prompt for VS2022"
+
+```
+tml> nmake /F Makefile.nmake
+```
+
+Open build/tml.sln with Visual Studio 2022 and compile it.
+
+For direct compilation the target `compile` can be used.
+
+```
+tml> nmake /F Makefile.nmake compile
+```
+
+For using the Makefile (without .nmake) the GNU make utility for Windows is needed (https://gnuwin32.sourceforge.net/packages/make.htm). Also cygwin is supported.
+
 License
 -------
 TML is dual-licensed under the very permissive [zlib license](LICENSE) and [MIT license](MIT-LICENSE).

@@ -3,9 +3,13 @@ all: build compile
 
 build:
 	-mkdir build
-ifeq ($(OS),Windows_NT)
-	rem visual studio 2017 (version number 15.0)
-	cd build && cmake -G "Visual Studio 15" ..
+ifneq (,$(findstring /cygdrive/,$(PATH)))
+	echo "Using cygwin"
+	echo "visual studio 2022 (version number 17.0)"
+	cd build && cmake -G "Visual Studio 17" ..
+else ifeq ($(OS),Windows_NT)
+	echo visual studio 2022 (version number 17.0)
+	cd build && cmake -G "Visual Studio 17" ..
 else
 	cd build; cmake ..
 	#cd build; cmake -DCMAKE_BUILD_TYPE=Debug ..
@@ -20,7 +24,9 @@ else
 endif
 
 clean:
-ifeq ($(OS),Windows_NT)
+ifneq (,$(findstring /cygdrive/,$(PATH)))
+	rm -rf build
+else ifeq ($(OS),Windows_NT)
 	-rmdir build /s /q
 else
 	rm -rf build

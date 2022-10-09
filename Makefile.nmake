@@ -1,5 +1,7 @@
 
-all: build compile
+all: build openmessage
+
+compile: build msbuild
 
 build: makedir build2022 
 
@@ -18,7 +20,10 @@ build2022:
 	@echo "Visual studio 2022 (version number 17.0)"
 	cd build && cmake -G "Visual Studio 17" ..
 
-compile:
+msbuild:
+	msbuild build/tml.sln
+
+openmessage:
 	@echo ""
 	@echo "Open the project with Visual Studio and compile it ;-)"
 
