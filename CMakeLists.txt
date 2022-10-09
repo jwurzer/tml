@@ -11,7 +11,7 @@ project(${PRJ_NAME})
 set(CMAKE_CXX_STANDARD 11)
 
 if (CMAKE_COMPILER_IS_GNUCXX)
-	set (CMAKE_CXX_FLAGS "-std=c++11 -Wall -Wextra -Winit-self -Wfloat-equal -Wreorder")
+	set (CMAKE_CXX_FLAGS "-std=c++11 -Wall -Wextra -Wconversion -Winit-self -Wfloat-equal -Wreorder")
 	set (CMAKE_CXX_FLAGS_DEBUG "-ggdb -O0")
 	set (CMAKE_CXX_FLAGS_RELEASE  "-O3")
 endif ()
