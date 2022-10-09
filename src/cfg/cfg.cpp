@@ -12,7 +12,7 @@ namespace cfg
 				bool allowRandomSequence)
 		{
 			if (curRuleIndex < rulesSize && ruleName == rules[curRuleIndex].mName) {
-				return curRuleIndex;
+				return static_cast<int>(curRuleIndex);
 			}
 			// first search after the current rule index is also allowed
 			// if random sequence is false because the sequence is unchanged.
@@ -21,7 +21,7 @@ namespace cfg
 			// should be used.
 			for (std::size_t i = curRuleIndex + 1; i < rulesSize; i++) {
 				if (ruleName == rules[i].mName) {
-					return i;
+					return static_cast<int>(i);
 				}
 			}
 			if (!allowRandomSequence) {
@@ -32,7 +32,7 @@ namespace cfg
 			// curRuleIndex can be greater than rulesSize.
 			for (std::size_t i = 0; i < curRuleIndex && i < rulesSize; i++) {
 				if (ruleName == rules[i].mName) {
-					return i;
+					return static_cast<int>(i);
 				}
 			}
 			return -1; // no rule found
@@ -356,11 +356,11 @@ bool cfg::Value::equalText(const std::string& text) const
 const cfg::NameValuePair* cfg::Value::objectGetValuePair(
 		const std::string &attrName) const
 {
-	unsigned int pairCount = mObject.size();
-	unsigned int foundCount = 0;
+	std::size_t pairCount = mObject.size();
+	std::size_t foundCount = 0;
 	const NameValuePair* valuePair = nullptr;
 
-	for (unsigned int i = 0; i < pairCount; i++) {
+	for (std::size_t i = 0; i < pairCount; i++) {
 		if (mObject[i].mName.mType != Value::TYPE_TEXT) {
 			continue;
 		}
@@ -456,9 +456,9 @@ std::vector<const cfg::NameValuePair*> cfg::Value::objectGetValuePairs(
 		const std::string &attrName) const
 {
 	std::vector<const cfg::NameValuePair*> pairs;
-	unsigned int pairCount = mObject.size();
+	std::size_t pairCount = mObject.size();
 
-	for (unsigned int i = 0; i < pairCount; i++) {
+	for (std::size_t i = 0; i < pairCount; i++) {
 		if (mObject[i].mName.mType != Value::TYPE_TEXT) {
 			continue;
 		}
@@ -474,9 +474,9 @@ std::vector<const cfg::Value*> cfg::Value::objectGetValues(
 		const std::string &attrName) const
 {
 	std::vector<const cfg::Value*> values;
-	unsigned int pairCount = mObject.size();
+	std::size_t pairCount = mObject.size();
 
-	for (unsigned int i = 0; i < pairCount; i++) {
+	for (std::size_t i = 0; i < pairCount; i++) {
 		if (mObject[i].mName.mType != Value::TYPE_TEXT) {
 			continue;
 		}
@@ -519,16 +519,16 @@ std::vector<int> cfg::Value::objectGetIntegers(const std::string &attrName) cons
 
 int cfg::Value::objectGetAttrIndex(const std::string &attrName) const
 {
-	unsigned int pairCount = mObject.size();
+	std::size_t pairCount = mObject.size();
 
-	for (unsigned int i = 0; i < pairCount; i++) {
+	for (std::size_t i = 0; i < pairCount; i++) {
 		if (mObject[i].mName.mType != Value::TYPE_TEXT) {
 			continue;
 		}
 		if (mObject[i].mName.mText != attrName) {
 			continue;
 		}
-		return i;
+		return static_cast<int>(i);
 	}
 	return -1;
 }
@@ -795,7 +795,7 @@ int cfg::objectGet(const std::vector<NameValuePair>& nvpairsOfObject,
 				if (outNextIndex) {
 					*outNextIndex = ii;
 				}
-				return storeCount;
+				return static_cast<int>(storeCount);
 			}
 			if (errMsg) {
 				if (riWithRandomSequence >= 0) {
@@ -941,7 +941,7 @@ int cfg::objectGet(const std::vector<NameValuePair>& nvpairsOfObject,
 	if (outNextIndex) {
 		*outNextIndex = i;
 	}
-	return storeCount;
+	return static_cast<int>(storeCount);
 }
 
 //-----------------------------------------------

@@ -16,7 +16,7 @@ namespace cfg
 				bool inclEmptyLines, bool inclComments,
 				std::string& outErrorMsg) override;
 		virtual bool pop() override;
-		virtual unsigned int getNestedDeep() const override { return mPathStack.size(); }
+		virtual unsigned int getNestedDeep() const override { return static_cast<unsigned int>(mPathStack.size()); }
 	private:
 		TmlParser mParser;
 		std::vector<std::string> mPathStack;

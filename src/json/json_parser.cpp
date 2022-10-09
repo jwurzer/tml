@@ -303,7 +303,7 @@ bool cfg::JsonParser::getAsTree(Value &root, const std::string& filename,
 
 	int rv = 0;
 	do {
-		rv = jsmn_parse(&p, fullContent.data(), fullContent.size() - 1, tok.data(), tok.size());
+		rv = jsmn_parse(&p, fullContent.data(), fullContent.size() - 1, tok.data(), static_cast<unsigned int>(tok.size()));
 		if (rv < 0) {
 			switch (rv) {
 				case JSMN_ERROR_INVAL:

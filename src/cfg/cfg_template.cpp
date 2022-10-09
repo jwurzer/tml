@@ -354,7 +354,7 @@ namespace cfg
 				}
 				int pairAddRemoveCount = 0;
 				templateNameStack.push_back(tempName);
-				if (!applyTemplates(templateMap, pairs, index, tmpPairs.size(),
+				if (!applyTemplates(templateMap, pairs, static_cast<int>(index), static_cast<int>(tmpPairs.size()),
 						keywordForUsingTemplate,
 						checkForInterpreterExpressions,
 						allowInterpretationWithQuotes,
@@ -443,7 +443,7 @@ namespace cfg
 								", no multiple nv-pairs)";
 						return false;
 					}
-					index = i;
+					index = static_cast<int>(i);
 				}
 				if (index == -1) {
 					outErrorMsg = tempName +
@@ -732,7 +732,7 @@ bool cfg::cfgtemp::addTemplates(TemplateMap& templateMap, Value& cfgValue,
 			int namePairIndex = -1;
 			for (std::size_t pi = 0; pi < pairTmpCnt; ++pi) {
 				if (!pairsFromTmp[pi].isEmptyOrComment()) {
-					namePairIndex = pi;
+					namePairIndex = static_cast<int>(pi);
 					break;
 				}
 			}
@@ -744,7 +744,7 @@ bool cfg::cfgtemp::addTemplates(TemplateMap& templateMap, Value& cfgValue,
 			int paramsPairIndex = -1;
 			for (std::size_t pi = namePairIndex + 1; pi < pairTmpCnt; ++pi) {
 				if (!pairsFromTmp[pi].isEmptyOrComment()) {
-					paramsPairIndex = pi;
+					paramsPairIndex = static_cast<int>(pi);
 					break;
 				}
 			}

@@ -25,7 +25,7 @@ namespace cfg
 		CfgLexer(const cfg::Value& expressionValue, bool allowInterpretationWithQuotes)
 			:mTokenValues(expressionValue.mArray),
 			mAllowInterpretationWithQuotes(allowInterpretationWithQuotes),
-			mIndex(0), mOutOfRangeIndex(mTokenValues.size())
+			mIndex(0), mOutOfRangeIndex(static_cast<unsigned int>(mTokenValues.size()))
 		{
 			// Register all of the TokenTypes that are explicit punctuators.
 			for (int tt = 0; tt <= static_cast<int>(TokenType::END_OF_FILE); ++tt) {

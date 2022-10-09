@@ -189,7 +189,7 @@ int cfg::TmlParser::getNextTmlEntry(std::string& utf8Line, NameValuePair& entry,
 		entry.mName.mLineNumber = lineNumber;
 		entry.mName.mOffset = i + 1;
 		entry.mName.mNvpDeep = deep;
-		entry.mValue.mOffset = len;
+		entry.mValue.mOffset = static_cast<int>(len);
 		entry.mValue.mNvpDeep = deep;
 		entry.mDeep = deep;
 		return deep;
@@ -463,7 +463,7 @@ bool cfg::TmlParser::getAsTree(Value &root,
 	 * For this there is a extra logic which moves the comments and empty lines
 	 * to the correct object (or array). For this std::vector<Value> tmp; is used.
 	 */
-	unsigned int currentContiguousEmptyOrCommentCount = 0;
+	std::size_t currentContiguousEmptyOrCommentCount = 0;
 
 	/**
 	 * A parsed line as name-value-pair can be added
@@ -509,9 +509,9 @@ bool cfg::TmlParser::getAsTree(Value &root,
 						}
 
 						tmp.reserve(currentContiguousEmptyOrCommentCount);
-						unsigned int startIndex = obj.size() -
+						std::size_t startIndex = obj.size() -
 								currentContiguousEmptyOrCommentCount;
-						for (unsigned int i = 0;
+						for (std::size_t i = 0;
 								i < currentContiguousEmptyOrCommentCount; ++i) {
 							tmp.push_back(obj[startIndex + i].mName);
 						}
@@ -582,7 +582,7 @@ bool cfg::TmlParser::getAsTree(Value &root,
 						}
 
 						tmp.reserve(currentContiguousEmptyOrCommentCount);
-						unsigned int startIndex = array.size() -
+						std::size_t startIndex = array.size() -
 								currentContiguousEmptyOrCommentCount;
 						for (unsigned int i = 0;
 								i < currentContiguousEmptyOrCommentCount; ++i) {

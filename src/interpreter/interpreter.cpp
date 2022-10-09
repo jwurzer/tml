@@ -10,7 +10,7 @@ int cfg::interpreter::interpretAndReplaceExprValue(cfg::Value& exprResultValue,
 		// nothing to do
 		return 0;
 	}
-	unsigned int count = exprResultValue.mArray.size();
+	unsigned int count = static_cast<unsigned int>(exprResultValue.mArray.size());
 	std::unique_ptr<cfg::CfgParser> parser; // only created at first usage
 	cfg::Value fullResult;
 	fullResult.setArray();

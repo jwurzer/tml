@@ -1,0 +1,26 @@
+
+all: build compile
+
+build: makedir build2022 
+
+makedir:
+	-mkdir build
+
+build2017:
+	@echo "Visual studio 2017 (version number 15.0)"
+	cd build && cmake -G "Visual Studio 15" ..
+
+build2019:
+	@echo "Visual studio 2019 (version number 16.0)"
+	cd build && cmake -G "Visual Studio 16" ..
+
+build2022:
+	@echo "Visual studio 2022 (version number 17.0)"
+	cd build && cmake -G "Visual Studio 17" ..
+
+compile:
+	@echo ""
+	@echo "Open the project with Visual Studio and compile it ;-)"
+
+clean:
+	-rmdir build /s /q
