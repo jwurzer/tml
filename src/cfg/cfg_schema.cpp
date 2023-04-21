@@ -4,7 +4,7 @@ namespace cfg {
 	namespace schema {
 		namespace {
 
-			bool keywordCheck(const Value* values, unsigned int cnt, const std::string& keyword, std::string& outErrorMsg)
+			bool keywordCheck(const Value* values, size_t cnt, const std::string& keyword, std::string& outErrorMsg)
 			{
 				if (!values || !cnt) {
 					outErrorMsg = "keyword " + keyword + ": wrong parameters (internal)";
@@ -21,12 +21,12 @@ namespace cfg {
 				return true;
 			}
 
-			bool handleKeywordType(const Value* values, unsigned int cnt, NVFragmentSchema& nvfs, std::string& outErrorMsg)
+			bool handleKeywordType(const Value* values, size_t cnt, NVFragmentSchema& nvfs, std::string& outErrorMsg)
 			{
 				if (!keywordCheck(values, cnt, "type", outErrorMsg)) {
 					return false;
 				}
-				for (unsigned int i = 1; i < cnt; ++i) {
+				for (size_t i = 1; i < cnt; ++i) {
 					const std::string& type = values[i].mText;
 					if (type == "none") {
 						// is 'none' useful ??? is for none, nothing, empty (empty line)
@@ -70,7 +70,7 @@ namespace cfg {
 				return true;
 			}
 
-			bool handleKeywordValue(const Value* values, unsigned int cnt, NVFragmentSchema& nvfs, std::string& outErrorMsg)
+			bool handleKeywordValue(const Value* values, size_t cnt, NVFragmentSchema& nvfs, std::string& outErrorMsg)
 			{
 				if (!keywordCheck(values, cnt, "value", outErrorMsg)) {
 					return false;
@@ -81,13 +81,13 @@ namespace cfg {
 					return true;
 				}
 				nvfs.mValue.setArray();
-				for (unsigned int i = 1; i < cnt; ++i) {
+				for (size_t i = 1; i < cnt; ++i) {
 					nvfs.mValue.mArray.push_back(values[i]);
 				}
 				return true;
 			}
 
-			bool handleKeywordDefault(const Value* values, unsigned int cnt, NVFragmentSchema& nvfs, std::string& outErrorMsg)
+			bool handleKeywordDefault(const Value* values, size_t cnt, NVFragmentSchema& nvfs, std::string& outErrorMsg)
 			{
 				if (!keywordCheck(values, cnt, "default", outErrorMsg)) {
 					return false;
@@ -98,13 +98,13 @@ namespace cfg {
 					return true;
 				}
 				nvfs.mDefault.setArray();
-				for (unsigned int i = 1; i < cnt; ++i) {
+				for (size_t i = 1; i < cnt; ++i) {
 					nvfs.mDefault.mArray.push_back(values[i]);
 				}
 				return true;
 			}
 
-			bool handleKeywordMinOrMax(const Value* values, unsigned int cnt, NVFragmentSchema& nvfs, bool isMin,
+			bool handleKeywordMinOrMax(const Value* values, size_t cnt, NVFragmentSchema& nvfs, bool isMin,
 					std::string& outErrorMsg)
 			{
 				std::string keyword = isMin ? "min" : "max";
@@ -139,17 +139,17 @@ namespace cfg {
 				return true;
 			}
 
-			bool handleKeywordMin(const Value* values, unsigned int cnt, NVFragmentSchema& nvfs, std::string& outErrorMsg)
+			bool handleKeywordMin(const Value* values, size_t cnt, NVFragmentSchema& nvfs, std::string& outErrorMsg)
 			{
 				return handleKeywordMinOrMax(values, cnt, nvfs, true, outErrorMsg);
 			}
 
-			bool handleKeywordMax(const Value* values, unsigned int cnt, NVFragmentSchema& nvfs, std::string& outErrorMsg)
+			bool handleKeywordMax(const Value* values, size_t cnt, NVFragmentSchema& nvfs, std::string& outErrorMsg)
 			{
 				return handleKeywordMinOrMax(values, cnt, nvfs, false, outErrorMsg);
 			}
 
-			bool addKeywordToNVFragmentSchema(const Value* values, unsigned int cnt, NVFragmentSchema& nvfs, std::string& outErrorMsg)
+			bool addKeywordToNVFragmentSchema(const Value* values, size_t cnt, NVFragmentSchema& nvfs, std::string& outErrorMsg)
 			{
 				if (!values) {
 					outErrorMsg = "null pointer for keyword (internal error)";
@@ -197,14 +197,10 @@ namespace cfg {
 					outErrorMsg = values[0].getFilenameAndPosition() + ": keyword '" + keyword + "' is not supported";
 					return false;
 				}
-				//outErrorMsg += " TODO";
-				//for (unsigned int i = 0; i < cnt; ++i) {
-				//	outErrorMsg += " '" + values[i].mText + "'";
-				//}
 				return true;
 			}
 
-			bool addNVFragmentSchema(const Value* values, unsigned int cnt, NVFragmentSchema& nvfs, std::string& outErrorMsg)
+			bool addNVFragmentSchema(const Value* values, size_t cnt, NVFragmentSchema& nvfs, std::string& outErrorMsg)
 			{
 				if (!values) {
 					outErrorMsg = "null pointer (internal error)";
@@ -214,10 +210,10 @@ namespace cfg {
 					outErrorMsg = "empty array. count is 0. (internal error)";
 					return false;
 				}
-				unsigned int start = 0;
-				for (unsigned int i = 0; i < cnt; ++i) {
+				size_t start = 0;
+				for (size_t i = 0; i < cnt; ++i) {
 					if (values[i].mText == ":") {
-						unsigned int length = i - start;
+						size_t length = i - start;
 						if (!length) {
 							outErrorMsg = values[i].getFilenameAndPosition() + ": no values for validation keyword";
 							return false;
@@ -229,7 +225,7 @@ namespace cfg {
 						start = i + 1; // --> highest possible value is cnt if last is :
 					}
 				}
-				unsigned int length = cnt - start;
+				size_t length = cnt - start;
 				if (length > 0) {
 					if (!addKeywordToNVFragmentSchema(values + start, length, nvfs, outErrorMsg)) {
 						return false;
