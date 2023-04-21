@@ -5,6 +5,7 @@
 #include <cfg/cfg_translation.h>
 #include <cfg/cfg_include.h>
 #include <cfg/cfg_cppstring.h>
+#include <cfg/cfg_schema.h>
 #include <tml/tml_string.h>
 #include <tml/tml_file_loader.h>
 #include <json/json_string.h>
@@ -47,6 +48,7 @@ namespace
 				"  interpreter-tests            ... some unit-tests for interpreter\n" <<
 				"  interpret <filename>         ... evaluate expressions\n" <<
 				"  all-features <filename>      ... templates, variables, expressions\n" <<
+				"  validate <schema-filename> <filename>   ... validate\n" <<
 				std::endl;
 	}
 
@@ -457,6 +459,37 @@ namespace
 		std::cout << s << std::endl;
 		return 0;
 	}
+
+	int validate(const char* schemaFilename, const char* filename)
+	{
+		cfg::TmlParser schemaParser(schemaFilename);
+		cfg::NameValuePair schemaCvp;
+		if (!schemaParser.getAsTree(schemaCvp, true, true)) {
+			std::cerr << "parse " << schemaFilename << " failed" << std::endl;
+			std::cerr << "error: " << schemaParser.getExtendedErrorMsg() << std::endl;
+			return 1;
+		}
+		cfg::Value& value = schemaCvp.mValue;
+		std::cout << "==================== original ====================" << std::endl;
+		std::string s = cfg::tmlstring::valueToString(0, value);
+		std::cout << s << std::endl;
+
+		std::cout << "==================== load schema ====================" << std::endl;
+		std::string errMsg;
+		cfg::NVFragmentSchema nvfs;
+		bool rv = cfg::schema::getSchemaFromCfgValue(nvfs, value, errMsg);
+		std::cout << "rv: " << (rv ? "true" : "false") << ", err msg: " << errMsg << std::endl;
+
+		std::cout << "==================== schema as tml ====================" << std::endl;
+		cfg::Value cfgSchema;
+		errMsg.clear();
+		rv = cfg::schema::getSchemaAsCfgValue(cfgSchema, nvfs, errMsg);
+		std::cout << "rv: " << (rv ? "true" : "false") << ", err msg: " << errMsg << std::endl;
+		std::cout << cfg::tmlstring::valueToString(0, cfgSchema) << std::endl;
+
+		//bool rv = cfg::schema::validate(value, errMsg);
+		return 0;
+	}
 }
 
 int main(int argc, char* argv[])
@@ -619,6 +652,14 @@ int main(int argc, char* argv[])
 			return 1;
 		}
 		return allFeatures(argv[2]);
+	}
+	if (command == "validate") {
+		if (argc != 4) {
+			std::cerr << "validate command need exactly two arguments (schema-filename and tml-filename)" << std::endl;
+			printHelp(argv[0]);
+			return 1;
+		}
+		return validate(argv[2], argv[3]);
 	}
 	std::cerr << "command '" << command << "' is not supported" << std::endl;
 	printHelp(argv[0]);

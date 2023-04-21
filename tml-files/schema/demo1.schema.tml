@@ -1,0 +1,13 @@
+
+type string : value someText = type number
+#someText = type integer
+type float : value someText = type integer float : value 10 : default 10 : min -3 : max 7
+
+type string : value person
+	type string : value name = type string
+	type string : value age = type integer : default 10 : min 0 : max 150
+	type string : value isFemale = type boolean
+	type string : value level = type string : value low medium high
+
+type string : value abc
+
