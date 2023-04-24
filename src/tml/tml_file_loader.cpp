@@ -76,6 +76,12 @@ namespace cfg
 	}
 }
 
+void cfg::TmlFileLoader::reset()
+{
+	mParser.reset();
+	mPathStack.clear();
+}
+
 std::string cfg::TmlFileLoader::getFullFilename(const std::string& includeFilename) const
 {
 	std::string incFilename = includeFilename;

@@ -10,6 +10,7 @@ namespace cfg
 	class CFG_API TmlFileLoader: public FileLoader
 	{
 	public:
+		virtual void reset() override;
 		virtual std::string getFullFilename(const std::string& includeFilename) const override;
 		virtual bool loadAndPush(Value& outValue, std::string& outFullFilename,
 				const std::string& includeFilename,

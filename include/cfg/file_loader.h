@@ -9,6 +9,10 @@ namespace cfg
 	class CFG_API FileLoader
 	{
 	public:
+		/**
+		 * Reset all entries. FileLoader is like after new creation.
+		 */
+		virtual void reset() = 0;
 		virtual std::string getFullFilename(const std::string& includeFilename) const = 0;
 		virtual bool loadAndPush(Value& outValue,
 				std::string& outFullFilename,
