@@ -1,5 +1,4 @@
 #include <cfg_viewer.h>
-#include <cfg_gui.h>
 #include <cfg/file_loader.h>
 #include <interpreter/interpreter.h>
 #include <imgui.h>
@@ -8,6 +7,8 @@
 cfg::CfgViewer::CfgViewer(const std::shared_ptr<FileLoader>& fileLoader)
 		:mFileLoader(fileLoader)
 {
+	mCfgRenderOptions.mMultipleEmptyLineLimit = 0; // --> no empty lines
+	mCfgRenderOptions.mImGuiTreeNodeFlags = ImGuiTreeNodeFlags_DefaultOpen;
 }
 
 bool cfg::CfgViewer::load(const std::string& filename)
@@ -26,6 +27,7 @@ bool cfg::CfgViewer::reload()
 	mFileLoader->reset();
 	if (!mFileLoader->loadAndPush(mValueOriginal, outFullFilename, mFilename,
 			mInclEmptyLines, mInclComments, mErrMsg)) {
+		mLoadStatus = LoadStatus::ERR_ORIGINAL_FILE;
 		return false;
 	}
 
@@ -33,16 +35,19 @@ bool cfg::CfgViewer::reload()
 	if (!cfg::inc::loadAndIncludeFiles(mValueIncluded, mIncludedFiles, mFilename, *mFileLoader,
 			"include", mInclEmptyLines, mInclComments, mWithFileBuffering,
 			mErrMsg)) {
+		mLoadStatus = LoadStatus::ERR_INCLUDED;
 		return false;
 	}
 	mValueWithoutTemplates = mValueIncluded;
 	if (!cfg::cfgtemp::addTemplates(mTemplateMap, mValueWithoutTemplates, true, "template",
 			mErrMsg)) {
+		mLoadStatus = LoadStatus::ERR_ADD_TEMPLATES;
 		return false;
 	}
 	mValueTemplatesApplied = mValueWithoutTemplates;
 	if (!cfg::cfgtemp::useTemplates(mTemplateMap, mValueTemplatesApplied,
 			"use-template", true, false, mErrMsg)) {
+		mLoadStatus = LoadStatus::ERR_USE_TEMPLATES;
 		return false;
 	}
 
@@ -50,6 +55,7 @@ bool cfg::CfgViewer::reload()
 
 	if (!cfg::cfgtr::addTranslations(mTranslationsMap, value, true,
 			"translations", mErrMsg)) {
+		mLoadStatus = LoadStatus::ERR_ADD_TRANSLATIONS;
 		return false;
 	}
 	if (mTranslationsMap.find(mTranslationId) == mTranslationsMap.end()) {
@@ -66,6 +72,7 @@ bool cfg::CfgViewer::reload()
 		if (!mTranslationsMap.empty()) {
 			if (!cfg::cfgtr::useTranslations(mTranslationsMap,
 					mTranslationId, "tr(", true, value, mErrMsg)) {
+				mLoadStatus = LoadStatus::ERR_USE_TRANSLATIONS;
 				return false;
 			}
 		}
@@ -73,6 +80,7 @@ bool cfg::CfgViewer::reload()
 
 	if (!cfg::cfgtr::addTranslations(mProfilesMap, value, true,
 			"profiles", mErrMsg)) {
+		mLoadStatus = LoadStatus::ERR_ADD_PROFILES;
 		return false;
 	}
 	if (mProfilesMap.find(mProfileId) == mProfilesMap.end()) {
@@ -89,6 +97,7 @@ bool cfg::CfgViewer::reload()
 		if (!mProfilesMap.empty()) {
 			if (!cfg::cfgtr::useTranslations(mProfilesMap,
 					mProfileId, "pr(", true, value, mErrMsg)) {
+				mLoadStatus = LoadStatus::ERR_USE_PROFILES;
 				return false;
 			}
 		}
@@ -96,12 +105,14 @@ bool cfg::CfgViewer::reload()
 
 	if (!cfg::cfgtr::addVariables(mVariablesMap, value, true,
 			"variables", mErrMsg)) {
+		mLoadStatus = LoadStatus::ERR_ADD_VARIABLES;
 		return false;
 	}
 	if (mApplyVariables) {
 		if (!mVariablesMap.empty()) {
 			if (!cfg::cfgtr::useTranslations(mVariablesMap,
 					"", "$(", true, value, mErrMsg)) {
+				mLoadStatus = LoadStatus::ERR_USE_VARIABLES;
 				return false;
 			}
 		}
@@ -119,14 +130,14 @@ bool cfg::CfgViewer::reload()
 		return false;
 	}
 
-	mSuccessfulLoaded = true;
+	mLoadStatus = LoadStatus::LOADED_SUCCESSFUL;
 	return true;
 }
 
 void cfg::CfgViewer::unload()
 {
 	mFileLoader->reset();
-	mSuccessfulLoaded = false;
+	mLoadStatus = LoadStatus::UNLOADED;
 	mErrMsg.clear();
 	mValueOriginal.clear();
 	mValueIncluded.clear();
@@ -170,18 +181,43 @@ void cfg::CfgViewer::render(unsigned int resWidth, unsigned int resHeight)
 
 	gui::intentText("Filename: %s", mFilename.empty() ? "(empty)" : mFilename.c_str());
 	gui::intentText("Load count: %u", mLoadCount);
-	gui::intentText("Loaded successful: %s", mSuccessfulLoaded ? "true" : "false");
+	gui::intentText("Load status: %s", getLoadStatusAsString(mLoadStatus));
 	gui::intentText("Error msg: %s", mErrMsg.c_str());
+	if (ImGui::TreeNode("cfg-viewer-options", "Load options")) {
+		ImGui::Indent();
+		ImGui::Text("Reload necessary:");
+		ImGui::Checkbox("Apply translations", &mApplyTranslations);
+		ImGui::Checkbox("Apply profiles", &mApplyProfiles);
+		ImGui::Checkbox("Apply variables", &mApplyVariables);
+		ImGui::Checkbox("Incl empty lines", &mInclEmptyLines);
+		ImGui::Checkbox("Incl comments", &mInclComments);
+		ImGui::Checkbox("With file buffering", &mWithFileBuffering);
+		ImGui::Checkbox("Allow interpretation with quotes", &mAllowInterpretationWithQuotes);
+		ImGui::Checkbox("Allow array element interpretation", &mAllowArrayElementInterpretation);
+		ImGui::Checkbox("Allow name interpretation", &mAllowNameInterpretation);
+		ImGui::Checkbox("Allow value interpretation", &mAllowValueInterpretation);
+		ImGui::Unindent();
+		ImGui::TreePop();
+	}
 
-	ImGui::Checkbox("Apply translations", &mApplyTranslations);
-	ImGui::Checkbox("Apply profiles", &mApplyProfiles);
-	ImGui::Checkbox("Apply variables", &mApplyVariables);
+	if (ImGui::TreeNode("cfg-gui-render-options", "Render options")) {
+		ImGui::Indent();
+		ImGui::Checkbox("Show additional template infos",
+				&mCfgRenderOptions.mShowAdditionalTemplateInfosAtObjectName);
+		int& e = mCfgRenderOptions.mMultipleEmptyLineLimit;
+		ImGui::Text("Continuous empty lines:"); ImGui::SameLine();
+		ImGui::RadioButton("All", &e, -1); ImGui::SameLine();
+		ImGui::RadioButton("None", &e, 0); ImGui::SameLine();
+		ImGui::RadioButton("Only one", &e, 1);
+		ImGui::Unindent();
+		ImGui::TreePop();
+	}
 	gui::intentText("Translation ID: '%s'", mTranslationId.c_str());
 	gui::intentText("Profile ID: '%s'", mProfileId.c_str());
 
 	if (ImGui::CollapsingHeader("File original")) {
 		cfg::gui::valueAsImguiTree("file-original", mValueOriginal,
-				mAllowMultipleEmptyLines);
+				mCfgRenderOptions);
 	}
 
 	std::string includesLabel = "Includes: " +
@@ -194,7 +230,7 @@ void cfg::CfgViewer::render(unsigned int resWidth, unsigned int resHeight)
 
 	if (ImGui::CollapsingHeader("File included")) {
 		cfg::gui::valueAsImguiTree("file-included", mValueIncluded,
-				mAllowMultipleEmptyLines);
+				mCfgRenderOptions);
 	}
 
 	std::string templatesLabel = "Templates: " +
@@ -205,14 +241,12 @@ void cfg::CfgViewer::render(unsigned int resWidth, unsigned int resHeight)
 
 	if (ImGui::CollapsingHeader("File without templates")) {
 		cfg::gui::valueAsImguiTree("file-without-templates",
-				mValueWithoutTemplates,
-				mAllowMultipleEmptyLines);
+				mValueWithoutTemplates, mCfgRenderOptions);
 	}
 
 	if (ImGui::CollapsingHeader("File with applied templates")) {
 		cfg::gui::valueAsImguiTree("file-with-applied-templates",
-				mValueTemplatesApplied,
-				mAllowMultipleEmptyLines);
+				mValueTemplatesApplied, mCfgRenderOptions);
 	}
 
 	std::string translationsLabel = "Translations: " +
@@ -235,14 +269,45 @@ void cfg::CfgViewer::render(unsigned int resWidth, unsigned int resHeight)
 
 	if (ImGui::CollapsingHeader("File before interpreter")) {
 		cfg::gui::valueAsImguiTree("file-before-interpreter",
-				mValueBeforeInterpreter,
-				mAllowMultipleEmptyLines);
+				mValueBeforeInterpreter, mCfgRenderOptions);
 	}
 	if (ImGui::CollapsingHeader("File after interpreter")) {
 		cfg::gui::valueAsImguiTree("file-after-interpreter",
-				mValueAfterInterpreter,
-				mAllowMultipleEmptyLines);
+				mValueAfterInterpreter, mCfgRenderOptions);
 	}
 
 	ImGui::End();
+}
+
+const char* cfg::CfgViewer::getLoadStatusAsString(LoadStatus loadStatus)
+{
+	switch (loadStatus) {
+		case LoadStatus::UNLOADED:
+			return "UNLOADED";
+		case LoadStatus::LOADED_SUCCESSFUL:
+			return "LOADED_SUCCESSFUL";
+		case LoadStatus::ERR_ORIGINAL_FILE:
+			return "ERR_ORIGINAL_FILE";
+		case LoadStatus::ERR_INCLUDED:
+			return "ERR_INCLUDED";
+		case LoadStatus::ERR_ADD_TEMPLATES:
+			return "ERR_ADD_TEMPLATES";
+		case LoadStatus::ERR_USE_TEMPLATES:
+			return "ERR_USE_TEMPLATES";
+		case LoadStatus::ERR_ADD_TRANSLATIONS:
+			return "ERR_ADD_TRANSLATIONS";
+		case LoadStatus::ERR_USE_TRANSLATIONS:
+			return "ERR_USE_TRANSLATIONS";
+		case LoadStatus::ERR_ADD_PROFILES:
+			return "ERR_ADD_PROFILES";
+		case LoadStatus::ERR_USE_PROFILES:
+			return "ERR_USE_PROFILES";
+		case LoadStatus::ERR_ADD_VARIABLES:
+			return "ERR_ADD_VARIABLES";
+		case LoadStatus::ERR_USE_VARIABLES:
+			return "ERR_USE_VARIABLES";
+		case LoadStatus::ERR_INTERPRETER:
+			return "ERR_INTERPRETER";
+	}
+	return "unknown-error";
 }

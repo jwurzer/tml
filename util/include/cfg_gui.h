@@ -12,6 +12,21 @@ namespace cfg
 	class Value;
 	class NameValuePair;
 
+	class GuiRenderOptions
+	{
+	public:
+		bool mShowAdditionalTemplateInfosAtObjectName = true;
+		// -1 ... no limit (all), 0 ... zero (none), >= 1 ... count of limit
+		int mMultipleEmptyLineLimit = -1;
+		// e.g. flag ImGuiTreeNodeFlags_DefaultOpen can be set if all tree nodes
+		// should be open at the beginning for valueAsImguiTree() or
+		// nameValuePairAsImguiTree().
+		int mImGuiTreeNodeFlags = 0;
+		// is only used if mShowAdditionalTemplateInfosAtObjectName is true
+		// otherwise it is ignored and mImGuiTreeNodeFlags is also used for templates.
+		int mImGuiTreeNodeFlagsForTemplate = 0;
+	};
+
 	namespace gui
 	{
 		CFG_API
@@ -21,11 +36,12 @@ namespace cfg
 
 		CFG_API
 		void valueAsImguiTree(const std::string& internalLabelId,
-				const Value &cfgValue, bool allowMultipleEmptyLines = true);
+				const Value &cfgValue,
+				const GuiRenderOptions& options = GuiRenderOptions{});
 		CFG_API
 		void nameValuePairAsImguiTree(const std::string& internalLabelId,
 				const NameValuePair &cfgPair,
-				bool allowMultipleEmptyLines = true);
+				const GuiRenderOptions& options = GuiRenderOptions{});
 
 		CFG_API
 		void valueAsImguiText(const Value &cfgValue);

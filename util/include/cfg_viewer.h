@@ -6,6 +6,7 @@
 #include <cfg/cfg_include.h>
 #include <cfg/cfg_template.h>
 #include <cfg/cfg_translation.h>
+#include <cfg_gui.h>
 #include <memory>
 
 namespace cfg
@@ -24,6 +25,24 @@ namespace cfg
 		void setVisible() { mShowCfgViewer = true; }
 		void render(unsigned int resWidth, unsigned int resHeight);
 	private:
+		enum class LoadStatus
+		{
+			UNLOADED = 0,
+			LOADED_SUCCESSFUL,
+			ERR_ORIGINAL_FILE,
+			ERR_INCLUDED,
+			ERR_ADD_TEMPLATES,
+			ERR_USE_TEMPLATES,
+			ERR_ADD_TRANSLATIONS,
+			ERR_USE_TRANSLATIONS,
+			ERR_ADD_PROFILES,
+			ERR_USE_PROFILES,
+			ERR_ADD_VARIABLES,
+			ERR_USE_VARIABLES,
+			ERR_INTERPRETER,
+		};
+		static const char* getLoadStatusAsString(LoadStatus loadStatus);
+
 		std::shared_ptr<FileLoader> mFileLoader;
 		bool mShowCfgViewer = false;
 		bool mAutoResize = true;
@@ -32,8 +51,6 @@ namespace cfg
 		bool mApplyVariables = true;
 		std::string mTranslationId;
 		std::string mProfileId;
-
-		bool mAllowMultipleEmptyLines = false;
 
 		bool mInclEmptyLines = true;
 		bool mInclComments = true;
@@ -44,9 +61,12 @@ namespace cfg
 		bool mAllowNameInterpretation = true;
 		bool mAllowValueInterpretation = true;
 
+		// options without reloading
+		cfg::GuiRenderOptions mCfgRenderOptions;
+
 		std::string mFilename;
 		unsigned int mLoadCount = 0;
-		bool mSuccessfulLoaded = false;
+		LoadStatus mLoadStatus = LoadStatus::UNLOADED;
 		std::string mErrMsg;
 
 		cfg::Value mValueOriginal;
