@@ -1,0 +1,37 @@
+
+asdf
+asdf1
+	a1
+	b1
+	asdf2
+		a2
+		b2
+		asdf3
+			a3
+			b3
+		# comment 2 end
+
+	asdf2b
+		a2b
+		b2b
+asdf1b
+	a1b
+	b1b
+xyz = []
+	{}
+		aaa = 1
+	bbb
+	# comment a
+	# empty array
+	[]
+	[]
+		{}
+			a
+			b
+			c
+	# empty object
+	{}
+	ccc
+
+asdf
+

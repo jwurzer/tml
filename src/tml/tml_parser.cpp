@@ -2,7 +2,157 @@
 #include <cfg/cfg.h>
 #include <string.h>
 #include <stdlib.h>
+//#include <iostream>
 
+namespace cfg
+{
+	namespace
+	{
+		/**
+		 * Find all continuous empties and comments at the end of an object or an array
+		 * and check if they should moved to the parent.
+		 * @param cfg Must be an object or an array.
+		 * @param curDeep Current deep.
+		 * @return Start index for moving. If nothing is to move then the size of
+		 *         the object or array is returned.
+		 */
+		std::size_t getMoveIndexForEmptyAndComment(const Value& cfg, int curDeep)
+		{
+			int size = -1;
+			int emptyCommentCount = 0;
+			int moveIndex = -1;
+			if (cfg.isObject()) {
+				const std::vector<NameValuePair>& obj = cfg.mObject;
+				size = obj.size();
+				int i = -1;
+				for (i = size - 1; i >= 0; --i) {
+					if (!obj[i].isEmptyOrComment()) {
+						// --> no empty and no comment
+						break;
+					}
+				}
+				emptyCommentCount = size - i - 1;
+				int emptyIndex = size;
+				int commentIndex = size;
+				for (int i = size - emptyCommentCount; i < size; ++i) {
+					if (obj[i].mDeep < curDeep) {
+						if (obj[i].isEmpty()) {
+							emptyIndex = i;
+						}
+						if (obj[i].isComment()) {
+							commentIndex = i;
+							break;
+						}
+					}
+					else {
+						if (obj[i].isComment()) {
+							emptyIndex = size;
+						}
+					}
+				}
+				moveIndex = std::min(emptyIndex, commentIndex);
+			}
+			else if (cfg.isArray()) {
+				const std::vector<Value>& array = cfg.mArray;
+				size = array.size();
+				int i = -1;
+				for (i = size - 1; i >= 0; --i) {
+					if (!array[i].isEmpty() && !array[i].isComment()) {
+						// --> no empty and no comment
+						break;
+					}
+				}
+				emptyCommentCount = size - i - 1;
+				int emptyIndex = size;
+				int commentIndex = size;
+				for (int i = size - emptyCommentCount; i < size; ++i) {
+					if (array[i].mNvpDeep < curDeep) {
+						if (array[i].isEmpty()) {
+							emptyIndex = i;
+						}
+						if (array[i].isComment()) {
+							commentIndex = i;
+							break;
+						}
+					}
+					else {
+						if (array[i].isComment()) {
+							emptyIndex = size;
+						}
+					}
+				}
+				moveIndex = std::min(emptyIndex, commentIndex);
+			}
+			else {
+				//std::cout << cfg.getFilenameAndPosition() << ": no object and no array" << std::endl;
+				return 0;
+			}
+#if 0
+			std::cout << cfg.getFilenameAndPosition() <<
+					", cur deep " << curDeep <<
+					", size " << size <<
+					", empty comment cnt " << emptyCommentCount <<
+					", move count " << (size - moveIndex) <<
+					", move idx " << moveIndex << std::endl;
+#endif
+			return moveIndex;
+		}
+
+		/**
+		 * Only empty and comment are supported!
+		 */
+		void moveFromChildToParent(Value& child, Value& parent, std::size_t moveIndex)
+		{
+			if (!parent.isObject() && !parent.isArray()) {
+				return;
+			}
+
+			std::vector<Value> tmp;
+			if (child.isObject()) {
+				std::vector<NameValuePair>& obj = child.mObject;
+				std::size_t size = obj.size();
+				if (moveIndex >= size) {
+					return;
+				}
+				for (std::size_t i = moveIndex; i < size; ++i) {
+					tmp.push_back(std::move(obj[i].mName));
+				}
+				obj.resize(moveIndex);
+			}
+			else if (child.isArray()) {
+				std::vector<Value>& array = child.mArray;
+				std::size_t size = array.size();
+				if (moveIndex >= size) {
+					return;
+				}
+				for (std::size_t i = moveIndex; i < size; ++i) {
+					tmp.push_back(std::move(array[i]));
+				}
+				array.resize(moveIndex);
+			}
+
+			if (tmp.empty()) {
+				return;
+			}
+
+			if (parent.isObject()) {
+				std::vector<NameValuePair>& obj = parent.mObject;
+				for (Value& val : tmp) {
+					NameValuePair nvp;
+					nvp.mDeep = val.mNvpDeep;
+					nvp.mName = std::move(val);
+					obj.push_back(nvp);
+				}
+			}
+			else if (parent.isArray()) {
+				std::vector<Value>& array = parent.mArray;
+				for (Value& val : tmp) {
+					array.push_back(std::move(val));
+				}
+			}
+		}
+	}
+}
 cfg::TmlParser::TmlParser()
 		:mReadFromFile(false), mFilename(), mStrBuffer(), mIfs(), mIss(),
 		mInStream(&mIss), mLine(), mErrorCode(0), mErrorMsg(),
@@ -669,9 +819,15 @@ bool cfg::TmlParser::getAsTree(Value &root,
 					}
 				}
 				prevDeep = deep;
-			} else if (deep < prevDeep) {
-				for (int i = prevDeep; i > deep; --i) {
+			}
+			else if (deep < prevDeep) {
+				// check to move empties or comments to parent if deep is lower than child
+				// also shrink stack
+				for (int curDeep = prevDeep; curDeep > deep; --curDeep) {
+					std::size_t moveIndex = getMoveIndexForEmptyAndComment(*stack.back(), curDeep);
+					Value* child = stack.back();
 					stack.pop_back();
+					moveFromChildToParent(*child, *stack.back(), moveIndex);
 				}
 				prevDeep = deep;
 			}
@@ -722,6 +878,17 @@ bool cfg::TmlParser::getAsTree(Value &root,
 		//LOGE("error: %s\n", getExtendedErrorMsg().c_str());
 		return false;
 	}
+	//std::cout << "prev deep: before " << prevDeep << std::endl;
+	// check to move empties or comments to parent if deep is lower than child
+	// also shrink stack
+	while (prevDeep > 0) {
+		std::size_t moveIndex = getMoveIndexForEmptyAndComment(*stack.back(), prevDeep);
+		Value* child = stack.back();
+		stack.pop_back();
+		moveFromChildToParent(*child, *stack.back(), moveIndex);
+		--prevDeep;
+	}
+	//std::cout << "prev deep: after " << prevDeep << std::endl;
 	// deep should be -2 for end of file and not -1 which is a error
 	return true;
 }

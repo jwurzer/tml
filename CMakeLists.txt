@@ -16,12 +16,14 @@ if (CMAKE_COMPILER_IS_GNUCXX)
 	set (CMAKE_CXX_FLAGS_RELEASE  "-O3")
 endif ()
 
-file(GLOB_RECURSE PRJ_HEADERFILES include/*.h)
-file(GLOB_RECURSE PRJ_SOURCEFILES src/*.cpp)
+file(GLOB_RECURSE PRJ_HEADERFILES include/*.h example/*.h)
+file(GLOB_RECURSE PRJ_SOURCEFILES src/*.cpp example/*.cpp)
 
 add_executable(${PRJ_EXENAME} ${PRJ_HEADERFILES} ${PRJ_SOURCEFILES})
 
-target_include_directories(${PRJ_EXENAME} PRIVATE "${CMAKE_SOURCE_DIR}/include")
+target_include_directories(${PRJ_EXENAME} PRIVATE
+		"${CMAKE_SOURCE_DIR}/include"
+		"${CMAKE_SOURCE_DIR}/example")
 
 if (WIN32)
 

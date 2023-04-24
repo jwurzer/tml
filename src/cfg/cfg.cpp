@@ -353,6 +353,21 @@ bool cfg::Value::equalText(const std::string& text) const
 	return (mType == TYPE_TEXT && mText == text) ? true : false;
 }
 
+bool cfg::Value::isComplexArray() const
+{
+	if (!isArray()) {
+		return false;
+	}
+	for (const Value& val : mArray) {
+		if (!val.isSimple()) {
+			// --> find at least one element which is not simple.
+			// --> its a complex array
+			return true;
+		}
+	}
+	return false;
+}
+
 const cfg::NameValuePair* cfg::Value::objectGetValuePair(
 		const std::string &attrName) const
 {

@@ -4,6 +4,11 @@ asdf
 asdf = []
 	asdf
 	{}
+	aa
+	{}
+		x = 1
+		y = 2
+	a
 super
 a b c = []
 x z y = {}

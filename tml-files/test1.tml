@@ -3,11 +3,28 @@ asdf
 1
 4.5
 asdf 4.5 1 bool
+# comment 0
 asdf0 5.5 1 false
+# comment 1
 	asdf1 6.5 1 true
-# comment
+	# comment
+	asdf
+	# comment at the end
+# comment for next outside
 x = 34
+obj1
+	asdf
+	asdf
+obj2
+	a
+	b
+	c
+obj-comments
+	# aa
+	# bb
+	# cc
 y = 8
+# comment before object
 obj
 
 	# name value pairs for object 'obj'
@@ -16,3 +33,23 @@ obj
 z = asdf
 www = asdf 1234 98.3 bool null ok yes no
 asdf = "asdfasdf \"asd=fa\\sdf"
+
+# asdf
+obj1
+	a
+	b
+	obj2
+		a
+		b
+
+		# abc
+	# asdf a
+
+	# asdf b
+		# asdf b1
+	# asdf b2
+# asdf c
+
+# comment 1
+# comment 2
+#adsf

@@ -6,7 +6,7 @@ namespace cfg
 {
 	namespace
 	{
-		void addTab(std::stringstream& ssout, int count)
+		void addTab(std::ostream& ssout, int count)
 		{
 			if (count < 0) {
 				return;
@@ -80,8 +80,8 @@ namespace cfg
 			return ss.str();
 		}
 
-		void addSimpleValueToStringStream(const Value& cfgValue,
-				std::stringstream& ss)
+		void addSimpleValueToStream(const Value& cfgValue,
+				std::ostream& ss)
 		{
 			switch (cfgValue.mType) {
 				case Value::TYPE_NULL:
@@ -105,11 +105,22 @@ namespace cfg
 			}
 		}
 
-		void addValueToStringStream(unsigned int deep, const Value& cfgValue,
-				std::stringstream& ss)
+		void addObjectToStream(unsigned int deep,
+				const Value &cfgValue, std::ostream& ss,
+				bool forceDeepByStoredDeepValue);
+
+		void addValueToStream(unsigned int deep, const Value& cfgValue,
+				std::ostream& ss, bool forceDeepByStoredDeepValue)
 		{
+			if (cfgValue.isEmpty()) {
+				return;
+			}
+			if (cfgValue.isComment()) {
+				ss << "#" << cfgValue.mText;
+				return;
+			}
 			if (cfgValue.isSimple()) {
-				addSimpleValueToStringStream(cfgValue, ss);
+				addSimpleValueToStream(cfgValue, ss);
 				return;
 			}
 			if (cfgValue.isArray()) {
@@ -119,16 +130,10 @@ namespace cfg
 				}
 				// TODO check if not empty if its only comments or empty lines...
 				std::size_t cnt = cfgValue.mArray.size();
-				bool fullArrayIsSimple = true;
-				for (std::size_t i = 0; i < cnt; ++i) {
-					if (!cfgValue.mArray[i].isSimple()) {
-						fullArrayIsSimple = false;
-						break;
-					}
-				}
+				bool fullArrayIsSimple = !cfgValue.isComplexArray();
 				if (fullArrayIsSimple) {
 					for (std::size_t i = 0; i < cnt; ++i) {
-						addSimpleValueToStringStream(cfgValue.mArray[i], ss);
+						addSimpleValueToStream(cfgValue.mArray[i], ss);
 						if (i + 1 < cnt) {
 							ss << " ";
 						}
@@ -137,65 +142,107 @@ namespace cfg
 				else {
 					ss << "[]\n";
 					for (std::size_t i = 0; i < cnt; ++i) {
-						bool forceDeepByStoredDeepValue = false; // TODO remove
-						int storedDeep = -2; // TODO remove
-						if (cfgValue.mArray[i].isObject()) {
-							addTab(ss, deep + 1);
-							ss << "{}\n";
-							::cfg::tmlstring::valueToStringStream(deep + 2,
-									cfgValue.mArray[i], ss,
-									forceDeepByStoredDeepValue, storedDeep);
-						}
-						else {
-							if (cfgValue.mArray[i].isEmpty()) {
-								// --> only a empty line --> nothing to to (excepted the line break at the end)
-								// TODO: maybe correct indentation of original file???
-							}
-							else if (cfgValue.mArray[i].isComment()) {
-								addTab(ss, deep + 1);
-								ss << "#" << cfgValue.mArray[i].mText << "\n";
-								// TODO: maybe correct indentation of original file???
-							}
-							else {
-								addTab(ss, deep + 1);
-								addValueToStringStream(deep + 1, cfgValue.mArray[i], ss);
-							}
-							if (i + 1 < cnt) {
-								ss << "\n";
-							}
+						addTab(ss, deep + 1);
+						addValueToStream(deep + 1, cfgValue.mArray[i], ss, forceDeepByStoredDeepValue);
+						if (i + 1 < cnt) {
+							ss << "\n";
 						}
 					}
+				}
+				return;
+			}
+			if (cfgValue.isObject()) {
+				ss << "{}";
+				if (!cfgValue.mObject.empty()) {
+					ss << "\n";
+					addObjectToStream(deep + 1, cfgValue, ss, forceDeepByStoredDeepValue);
 				}
 				return;
 			}
 			ss << "ERROR";
 		}
 
-		void addObjectToStringStream(unsigned int deep,
-				const Value &cfgValue, std::stringstream& ss,
+		void addNameValuePairToStream(unsigned int deep,
+				const NameValuePair& cfgPair, std::ostream& ss,
+				bool forceDeepByStoredDeepValue);
+
+		void addObjectToStream(unsigned int deep,
+				const Value &cfgValue, std::ostream& ss,
 				bool forceDeepByStoredDeepValue)
 		{
-			for (const auto& cfgPair : cfgValue.mObject) {
-				tmlstring::nameValuePairToStringStream(deep, cfgPair, ss,
+			std::size_t cnt = cfgValue.mObject.size();
+			for (std::size_t i = 0; i < cnt; ++i) {
+				const auto& cfgPair = cfgValue.mObject[i];
+				addNameValuePairToStream(deep, cfgPair, ss,
+						forceDeepByStoredDeepValue);
+				if (i + 1 < cnt) {
+					ss << "\n";
+				}
+			}
+		}
+
+		void addNameValuePairToStream(unsigned int deep,
+				const NameValuePair& cfgPair, std::ostream& ss,
+				bool forceDeepByStoredDeepValue)
+		{
+			if (cfgPair.mName.isEmpty() && cfgPair.mValue.isEmpty()) {
+				addTab(ss, cfgPair.mDeep); // if mDeep is negative then its ignored
+				return;
+			}
+			if (cfgPair.mName.isComment() && cfgPair.mValue.isEmpty()) {
+				if (cfgPair.mDeep >= 0 || forceDeepByStoredDeepValue) {
+					// if mDeep is negative (can only be the case if
+					// forceDeepByStoredDeepValue is true) then its ignored
+					addTab(ss, cfgPair.mDeep);
+				}
+				else {
+					addTab(ss, deep);
+				}
+				ss << "#" << cfgPair.mName.mText;
+				return;
+			}
+			if (cfgPair.mName.isObject()) {
+				ss << "name can't be an object";
+				return;
+			}
+			addTab(ss, forceDeepByStoredDeepValue ? cfgPair.mDeep : deep);
+			addValueToStream(deep, cfgPair.mName, ss, forceDeepByStoredDeepValue);
+			if (cfgPair.mValue.isObject()) {
+				if (cfgPair.mValue.mObject.empty()) {
+					// TODO check if not empty if its only comments or empty lines...
+					ss << " = {}";
+				}
+				else {
+					ss << "\n";
+					addObjectToStream(deep + 1, cfgPair.mValue, ss, forceDeepByStoredDeepValue);
+				}
+			}
+			else if (cfgPair.mValue.isEmpty()) {
+				// nothing to do
+			}
+			else {
+				ss << " = ";
+				addValueToStream(deep, cfgPair.mValue, ss,
 						forceDeepByStoredDeepValue);
 			}
 		}
 	}
 }
 
-void cfg::tmlstring::valueToStringStream(unsigned int deep,
-		const Value &cfgValue, std::stringstream& ss,
+void cfg::tmlstring::valueToStream(unsigned int deep,
+		const Value &cfgValue, std::ostream& ss,
 		bool forceDeepByStoredDeepValue, int storedDeep)
 {
 	if (storedDeep <= -2) {
 		storedDeep = deep;
 	}
 	if (cfgValue.isObject()) {
-		addObjectToStringStream(deep, cfgValue, ss, forceDeepByStoredDeepValue);
+		addObjectToStream(deep, cfgValue, ss, forceDeepByStoredDeepValue);
+		ss << "\n";
 	}
 	else {
 		addTab(ss, forceDeepByStoredDeepValue ? storedDeep : deep);
-		addValueToStringStream(deep, cfgValue, ss);
+		addValueToStream(deep, cfgValue, ss, forceDeepByStoredDeepValue);
 		ss << "\n";
 	}
 }
@@ -204,56 +251,55 @@ std::string cfg::tmlstring::valueToString(unsigned int deep,
 		const Value& cfgValue, bool forceDeepByStoredDeepValue, int storedDeep)
 {
 	std::stringstream ss;
-	valueToStringStream(deep, cfgValue, ss, forceDeepByStoredDeepValue, storedDeep);
+	valueToStream(deep, cfgValue, ss, forceDeepByStoredDeepValue, storedDeep);
 	return ss.str();
 }
 
-void cfg::tmlstring::nameValuePairToStringStream(unsigned int deep,
-		const NameValuePair& cfgPair, std::stringstream& ss,
+std::string cfg::tmlstring::plainValueToString(const Value& cfgValue)
+{
+	if (cfgValue.isEmpty()) {
+		return "";
+	}
+	std::stringstream ss;
+	if (cfgValue.isComment()) {
+		ss << "#" << cfgValue.mText;
+		return ss.str();
+	}
+	if (cfgValue.isArray()) {
+		if (cfgValue.isComplexArray()) {
+			return "ERROR";
+		}
+		std::size_t cnt = cfgValue.mArray.size();
+		if (!cnt) {
+			// empty array
+			return "[]";
+		}
+		for (std::size_t i = 0; i < cnt; ++i) {
+			addSimpleValueToStream(cfgValue.mArray[i], ss);
+			if (i + 1 < cnt) {
+				ss << " ";
+			}
+		}
+		return ss.str();
+	}
+	if (cfgValue.isObject()) {
+		if (!cfgValue.mObject.empty()) {
+			ss << "ERROR";
+		}
+		ss << "{}";
+		return ss.str();
+	}
+
+	addSimpleValueToStream(cfgValue, ss);
+	return ss.str();
+}
+
+void cfg::tmlstring::nameValuePairToStream(unsigned int deep,
+		const NameValuePair& cfgPair, std::ostream& ss,
 		bool forceDeepByStoredDeepValue)
 {
-	if (cfgPair.mName.isEmpty() && cfgPair.mValue.isEmpty()) {
-		addTab(ss, cfgPair.mDeep); // if mDeep is negative then its ignored
-		ss << "\n";
-		return;
-	}
-	if (cfgPair.mName.isComment() && cfgPair.mValue.isEmpty()) {
-		if (cfgPair.mDeep >= 0 || forceDeepByStoredDeepValue) {
-			// if mDeep is negative (can only be the case if
-			// forceDeepByStoredDeepValue is true) then its ignored
-			addTab(ss, cfgPair.mDeep);
-		}
-		else {
-			addTab(ss, deep);
-		}
-		ss << "#" << cfgPair.mName.mText << "\n";
-		return;
-	}
-	if (cfgPair.mName.isObject()) {
-		ss << "name can't be an object\n";
-		return;
-	}
-	addTab(ss, forceDeepByStoredDeepValue ? cfgPair.mDeep : deep);
-	addValueToStringStream(deep, cfgPair.mName, ss);
-	if (cfgPair.mValue.isObject()) {
-		if (cfgPair.mValue.mObject.empty()) {
-			// TODO check if not empty if its only comments or empty lines...
-			ss << " = {}\n";
-		}
-		else {
-			ss << "\n";
-			addObjectToStringStream(deep + 1, cfgPair.mValue, ss,
-					forceDeepByStoredDeepValue);
-		}
-	}
-	else if (cfgPair.mValue.isEmpty()) {
-		ss << "\n";
-	}
-	else {
-		ss << " = ";
-		addValueToStringStream(deep, cfgPair.mValue, ss);
-		ss << "\n";
-	}
+	addNameValuePairToStream(deep, cfgPair, ss, forceDeepByStoredDeepValue);
+	ss << "\n";
 }
 
 std::string cfg::tmlstring::nameValuePairToString(unsigned int deep,
@@ -261,6 +307,6 @@ std::string cfg::tmlstring::nameValuePairToString(unsigned int deep,
 		bool forceDeepByStoredDeepValue)
 {
 	std::stringstream ss;
-	nameValuePairToStringStream(deep, cfgPair, ss, forceDeepByStoredDeepValue);
+	nameValuePairToStream(deep, cfgPair, ss, forceDeepByStoredDeepValue);
 	return ss.str();
 }

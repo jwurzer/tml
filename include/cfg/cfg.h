@@ -173,6 +173,16 @@ namespace cfg
 		bool isObject() const { return mType == TYPE_OBJECT; }
 
 		/**
+		 * Check if it is an array and if at least one element is included which
+		 * is not simple (a subarray, an object, none, comment see: isSimple()).
+		 *
+		 * @return Return true if it is an array and at least one element is
+		 *         included which is not simple. Return false if it is no array
+		 *         or all elements of the array are simple.
+		 */
+		bool isComplexArray() const;
+
+		/**
 		 * @param attrName attribute name of a value pair inside a object
 		 * @return Return null if none or more than one exist otherwise if
 		 *         exactly one attribute with this name exist then this

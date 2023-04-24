@@ -6,7 +6,7 @@ namespace cfg
 {
 	namespace
 	{
-		void addCharAsIndent(std::stringstream& ssout, unsigned int count, char ch)
+		void addCharAsIndent(std::ostream& ssout, unsigned int count, char ch)
 		{
 			char indentStr[6] = {ch, ch, ch, ch, ch, 0};
 			if (count <= 5) {
@@ -19,7 +19,7 @@ namespace cfg
 			}
 		}
 
-		void addIndent(std::stringstream& ssout, unsigned int count, int intentMode)
+		void addIndent(std::ostream& ssout, unsigned int count, int intentMode)
 		{
 			if (intentMode < 0) {
 				return;
@@ -32,14 +32,14 @@ namespace cfg
 			addCharAsIndent(ssout, count * static_cast<unsigned int>(intentMode), ' ');
 		}
 
-		void addNewline(std::stringstream& ssout, int indentMode)
+		void addNewline(std::ostream& ssout, int indentMode)
 		{
 			if (indentMode >= -1) {
 				ssout << '\n';
 			}
 		}
 
-		void addTextForJson(std::stringstream& ss, const std::string& text)
+		void addTextForJson(std::ostream& ss, const std::string& text)
 		{
 			if (text.empty()) {
 				ss << "\"\"";
@@ -88,8 +88,8 @@ namespace cfg
 		 * Only a simple value, an EMPTY array or an EMPTY object is allowed.
 		 * An array with elements or an object with name value pairs is NOT allowed!
 		 */
-		void addSimpleValueToStringStream(const Value& cfgValue,
-				std::stringstream& ss)
+		void addSimpleValueToStream(const Value& cfgValue,
+				std::ostream& ss)
 		{
 			switch (cfgValue.mType) {
 				case Value::TYPE_NULL:
@@ -127,11 +127,11 @@ namespace cfg
 			}
 		}
 
-		void addValueToStringStream(unsigned int deep, const Value& cfgValue,
-				std::stringstream& ss, int indentMode)
+		void addValueToStream(unsigned int deep, const Value& cfgValue,
+				std::ostream& ss, int indentMode)
 		{
 			if (cfgValue.isSimple()) {
-				addSimpleValueToStringStream(cfgValue, ss);
+				addSimpleValueToStream(cfgValue, ss);
 				return;
 			}
 			if (cfgValue.isArray()) {
@@ -152,7 +152,7 @@ namespace cfg
 				if (fullArrayIsSimple) {
 					ss << "[";
 					for (std::size_t i = 0; i < cnt; ++i) {
-						addSimpleValueToStringStream(cfgValue.mArray[i], ss);
+						addSimpleValueToStream(cfgValue.mArray[i], ss);
 						if (i + 1 < cnt) {
 							ss << ", ";
 						}
@@ -165,10 +165,10 @@ namespace cfg
 					for (std::size_t i = 0; i < cnt; ++i) {
 						addIndent(ss, deep + 1, indentMode);
 						if (cfgValue.mArray[i].isSimple()) {
-							addSimpleValueToStringStream(cfgValue.mArray[i], ss);
+							addSimpleValueToStream(cfgValue.mArray[i], ss);
 						}
 						else {
-							::cfg::jsonstring::valueToStringStream(deep + 1,
+							::cfg::jsonstring::valueToStream(deep + 1,
 									cfgValue.mArray[i], ss, indentMode,
 									false, false);
 						}
@@ -188,8 +188,8 @@ namespace cfg
 			ss << "ERROR";
 		}
 
-		void addObjectToStringStream(unsigned int deep,
-				const Value &cfgValue, std::stringstream& ss, int indentMode)
+		void addObjectToStream(unsigned int deep,
+				const Value &cfgValue, std::ostream& ss, int indentMode)
 		{
 			//addIndent(ss, deep, indentMode);
 			if (cfgValue.mObject.empty()) {
@@ -201,7 +201,7 @@ namespace cfg
 			std::size_t cfgPairCnt = cfgValue.mObject.size();
 			for (std::size_t i = 0; i < cfgPairCnt; ++i) {
 				const auto& cfgPair = cfgValue.mObject[i];
-				jsonstring::nameValuePairToStringStream(deep + 1, cfgPair, ss,
+				jsonstring::nameValuePairToStream(deep + 1, cfgPair, ss,
 						indentMode);
 				if (i + 1 < cfgPairCnt) {
 					ss << ",";
@@ -214,18 +214,18 @@ namespace cfg
 	}
 }
 
-void cfg::jsonstring::valueToStringStream(unsigned int deep,
-		const Value &cfgValue, std::stringstream& ss, int indentMode,
+void cfg::jsonstring::valueToStream(unsigned int deep,
+		const Value &cfgValue, std::ostream& ss, int indentMode,
 		bool addStartingIndent, bool addEndingNewline)
 {
 	if (cfgValue.isObject()) {
-		addObjectToStringStream(deep, cfgValue, ss, indentMode);
+		addObjectToStream(deep, cfgValue, ss, indentMode);
 	}
 	else {
 		if (addStartingIndent) {
 			addIndent(ss, deep, indentMode);
 		}
-		addValueToStringStream(deep, cfgValue, ss, indentMode);
+		addValueToStream(deep, cfgValue, ss, indentMode);
 		if (addEndingNewline) {
 			addNewline(ss, indentMode);
 		}
@@ -236,12 +236,12 @@ std::string cfg::jsonstring::valueToString(unsigned int deep,
 		const Value& cfgValue, int indentMode)
 {
 	std::stringstream ss;
-	valueToStringStream(deep, cfgValue, ss, indentMode);
+	valueToStream(deep, cfgValue, ss, indentMode);
 	return ss.str();
 }
 
-void cfg::jsonstring::nameValuePairToStringStream(unsigned int deep,
-		const NameValuePair& cfgPair, std::stringstream& ss, int indentMode)
+void cfg::jsonstring::nameValuePairToStream(unsigned int deep,
+		const NameValuePair& cfgPair, std::ostream& ss, int indentMode)
 {
 	if (cfgPair.mName.isEmpty() && cfgPair.mValue.isEmpty()) {
 		// --> empty line but JSON doesn't support empty lines
@@ -259,11 +259,11 @@ void cfg::jsonstring::nameValuePairToStringStream(unsigned int deep,
 	}
 	addIndent(ss, deep, indentMode);
 	if (cfgPair.mName.isText()) {
-		addValueToStringStream(deep, cfgPair.mName, ss, indentMode);
+		addValueToStream(deep, cfgPair.mName, ss, indentMode);
 	}
 	else {
 		ss << "\"(name)\": ";
-		cfg::jsonstring::valueToStringStream(deep, cfgPair.mName, ss, indentMode, false, false);
+		cfg::jsonstring::valueToStream(deep, cfgPair.mName, ss, indentMode, false, false);
 		if (cfgPair.mValue.isEmpty()) {
 			// in this case no "(empty)" must be added because the value
 			// is used for the name.
@@ -276,14 +276,14 @@ void cfg::jsonstring::nameValuePairToStringStream(unsigned int deep,
 	}
 	if (cfgPair.mValue.isObject()) {
 		ss << ": ";
-		addObjectToStringStream(deep, cfgPair.mValue, ss, indentMode);
+		addObjectToStream(deep, cfgPair.mValue, ss, indentMode);
 	}
 	else if (cfgPair.mValue.isEmpty()) {
 		ss << ": \"(empty)\"";
 	}
 	else {
 		ss << ": ";
-		addValueToStringStream(deep, cfgPair.mValue, ss, indentMode);
+		addValueToStream(deep, cfgPair.mValue, ss, indentMode);
 	}
 }
 
@@ -291,6 +291,6 @@ std::string cfg::jsonstring::nameValuePairToString(unsigned int deep,
 		const NameValuePair &cfgPair, int indentMode)
 {
 	std::stringstream ss;
-	nameValuePairToStringStream(deep, cfgPair, ss, indentMode);
+	nameValuePairToStream(deep, cfgPair, ss, indentMode);
 	return ss.str();
 }

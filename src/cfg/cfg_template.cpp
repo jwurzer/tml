@@ -681,7 +681,7 @@ std::string cfg::CfgTemplate::toString() const
 	ss << "\n";
 	ss << "tml:\n";
 	for (const auto& pair : mObject) {
-		cfg::tmlstring::nameValuePairToStringStream(1, pair, ss, false);
+		cfg::tmlstring::nameValuePairToStream(1, pair, ss, false);
 	}
 	return ss.str();
 }

@@ -4,6 +4,7 @@
 #include <cfg/export.h>
 
 #include <string>
+#include <ostream>
 
 namespace cfg
 {
@@ -29,8 +30,8 @@ namespace cfg
 		 *        how much spaces are used for one indention.
 		 */
 		CFG_API
-		void valueToStringStream(unsigned int deep,
-				const Value& cfgValue, std::stringstream& ss,
+		void valueToStream(unsigned int deep,
+				const Value& cfgValue, std::ostream& s,
 				int indentMode, bool addStartingIndent = true,
 				bool addEndingNewline = true);
 
@@ -39,8 +40,8 @@ namespace cfg
 				int indentMode);
 
 		CFG_API
-		void nameValuePairToStringStream(unsigned int deep,
-				const NameValuePair& cfgPair, std::stringstream& ss,
+		void nameValuePairToStream(unsigned int deep,
+				const NameValuePair& cfgPair, std::ostream& s,
 				int indentMode);
 
 		CFG_API
