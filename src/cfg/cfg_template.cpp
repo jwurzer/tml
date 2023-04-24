@@ -659,6 +659,12 @@ namespace cfg
 }
 
 cfg::CfgTemplate::CfgTemplate(const std::string& name,
+		const std::vector<std::string>& parameters)
+		:mName(name), mParameters(parameters), mObject()
+{
+}
+
+cfg::CfgTemplate::CfgTemplate(const std::string& name,
 		const std::vector<std::string>& parameters,
 		const std::vector<NameValuePair>::const_iterator& begin,
 		const std::vector<NameValuePair>::const_iterator& end)
@@ -799,6 +805,11 @@ bool cfg::cfgtemp::addTemplates(TemplateMap& templateMap, Value& cfgValue,
 						": parameter must be a text or an array of texts";
 				return false;
 			}
+#if 0
+			// WRONG version
+			// This version is problematic.
+			// It also includes empty lines and comments to the template pairs
+			// which can make problems when the template is used (applied).
 			if (!templateMap.insert(TemplateMap::value_type(name, CfgTemplate(
 					name, parameters,
 					pairsFromTmp.begin() + paramsPairIndex + 1,
@@ -807,6 +818,26 @@ bool cfg::cfgtemp::addTemplates(TemplateMap& templateMap, Value& cfgValue,
 						": insert template with name '" + name + "' failed";
 				return false;
 			}
+#else
+			// CORRECT version
+			// This version makes no problem also if file is loaded with empty lines and comments.
+			// The empty lines and comments are checked and not included to the template pairs.
+			auto rv = templateMap.insert(
+					TemplateMap::value_type(name, CfgTemplate(
+					name, parameters)));
+			if (!rv.second) {
+				outErrorMsg = namePair.mValue.getFilenameAndPosition() +
+						": insert template with name '" + name + "' failed";
+				return false;
+			}
+			std::vector<NameValuePair>& tempPairs = rv.first->second.getPairs();
+			tempPairs.reserve(pairTmpCnt - (paramsPairIndex + 1));
+			for (std::size_t ii = paramsPairIndex + 1; ii < pairTmpCnt; ++ii) {
+				if (!pairsFromTmp[ii].isEmptyOrComment()) {
+					tempPairs.push_back(pairsFromTmp[ii]);
+				}
+			}
+#endif
 			if (removeTemplatesFromCfgValue) {
 				pairs.erase(pairs.begin() + i);
 				--i;

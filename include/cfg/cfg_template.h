@@ -11,10 +11,13 @@ namespace cfg
 	{
 	public:
 		CfgTemplate(const std::string& name,
+				const std::vector<std::string>& parameters);
+		CfgTemplate(const std::string& name,
 				const std::vector<std::string>& parameters,
 				const std::vector<NameValuePair>::const_iterator& begin,
 				const std::vector<NameValuePair>::const_iterator& end);
 
+		std::vector<NameValuePair>& getPairs() { return mObject; }
 		const std::vector<NameValuePair>& getPairs() const { return mObject; }
 		std::size_t getParameterCount() const { return mParameters.size(); }
 		const std::vector<std::string>& getParameters() const { return mParameters; }
