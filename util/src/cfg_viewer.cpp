@@ -275,6 +275,25 @@ void cfg::CfgViewer::render(unsigned int resWidth, unsigned int resHeight)
 		cfg::gui::valueAsImguiTree("file-after-interpreter",
 				mValueAfterInterpreter, mCfgRenderOptions);
 	}
+	if (ImGui::CollapsingHeader("Search after interpreter (tree)")) {
+		cfg::GuiRenderOptions options = mCfgRenderOptions;
+		options.mUseSearchMode = true;
+		cfg::gui::valueAsImguiTree("file-search-tree",
+				mValueAfterInterpreter, options);
+	}
+	if (ImGui::CollapsingHeader("Search after interpreter (text)")) {
+		cfg::GuiRenderOptions options = mCfgRenderOptions;
+		options.mUseSearchMode = true;
+		//cfg::gui::valueAsImguiTextEx(mValueAfterInterpreter, options);
+		std::stringstream ss;
+		cfg::gui::valueToStream(ss, mValueAfterInterpreter, options);
+		std::string str = ss.str();
+		// copy str to vector because a char* instead of const char* for InputTextMultiline is needed.
+		std::vector<char> text(str.begin(), str.end());
+		ImGuiInputTextFlags flags = ImGuiInputTextFlags_AllowTabInput | ImGuiInputTextFlags_ReadOnly;
+		ImGui::InputTextMultiline("##source", text.data(), text.size(),
+				ImVec2(-FLT_MIN, ImGui::GetTextLineHeight() * 40), flags);
+	}
 
 	ImGui::End();
 }

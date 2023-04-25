@@ -368,6 +368,38 @@ bool cfg::Value::isComplexArray() const
 	return false;
 }
 
+bool cfg::Value::attributeExist(const std::string& attrName,
+		bool recursive, bool searchInclObjects, bool searchInclArrays) const
+{
+	if (searchInclObjects && isObject()) {
+		for (const NameValuePair& nvp : mObject) {
+			if (nvp.mName.isText() && nvp.mName.mText == attrName) {
+				return true;
+			}
+			if (recursive && nvp.isObject()) {
+				if (nvp.mValue.attributeExist(attrName, recursive,
+						searchInclObjects, searchInclArrays)) {
+					return true;
+				}
+			}
+		}
+	}
+	if (searchInclArrays && isArray()) {
+		for (const Value& val: mArray) {
+			if (val.isText() && val.mText == attrName) {
+				return true;
+			}
+			if (recursive && (val.isObject() || val.isArray())) {
+				if (val.attributeExist(attrName, recursive,
+						searchInclObjects, searchInclArrays)) {
+					return true;
+				}
+			}
+		}
+	}
+	return false;
+}
+
 const cfg::NameValuePair* cfg::Value::objectGetValuePair(
 		const std::string &attrName) const
 {

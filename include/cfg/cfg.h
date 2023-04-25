@@ -182,6 +182,8 @@ namespace cfg
 		 */
 		bool isComplexArray() const;
 
+		bool attributeExist(const std::string& attrName,
+				bool recursive, bool searchInclObjects, bool searchInclArrays) const;
 		/**
 		 * @param attrName attribute name of a value pair inside a object
 		 * @return Return null if none or more than one exist otherwise if

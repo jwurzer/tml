@@ -25,6 +25,8 @@ namespace cfg
 		// is only used if mShowAdditionalTemplateInfosAtObjectName is true
 		// otherwise it is ignored and mImGuiTreeNodeFlags is also used for templates.
 		int mImGuiTreeNodeFlagsForTemplate = 0;
+		bool mUseSearchMode = false;
+		std::string mSearchName = "id";
 	};
 
 	namespace gui
@@ -43,8 +45,41 @@ namespace cfg
 				const NameValuePair &cfgPair,
 				const GuiRenderOptions& options = GuiRenderOptions{});
 
+		/**
+		 * Support options for search.
+		 */
+		CFG_API
+		void valueToStream(std::ostream& out, const Value& cfgValue,
+				const GuiRenderOptions& options = GuiRenderOptions{});
+		/**
+		 * Support options for search.
+		 */
+		CFG_API
+		void nameValuePairToStream(std::ostream& out, const NameValuePair& cfgPair,
+				const GuiRenderOptions& options = GuiRenderOptions{});
+		/**
+		 * Support options for search.
+		 */
+		CFG_API
+		void valueAsImguiTextEx(const Value &cfgValue,
+				const GuiRenderOptions& options = GuiRenderOptions{});
+		/**
+		 * Support options for search.
+		 */
+		CFG_API
+		void nameValuePairAsImguiTextEx(const NameValuePair &cfgPair,
+				const GuiRenderOptions& options = GuiRenderOptions{});
+
+		/**
+		 * Use internal tmlstring::valueToStream() and render each line
+		 * as ImGui::Text.
+		 */
 		CFG_API
 		void valueAsImguiText(const Value &cfgValue);
+		/**
+		 * Use internal tmlstring::nameValuePairToStream() and render each line
+		 * as ImGui::Text.
+		 */
 		CFG_API
 		void nameValuePairAsImguiText(const NameValuePair &cfgPair);
 

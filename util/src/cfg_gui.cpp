@@ -2,7 +2,7 @@
 #include <cfg/cfg.h>
 #include <tml/tml_string.h>
 #include <imgui.h>
-#include <sstream> // TODO should not be necessary because of tml/tml_string.h --> include in tml_string.h
+#include <sstream>
 
 namespace cfg
 {
@@ -10,6 +10,31 @@ namespace cfg
 	{
 		namespace
 		{
+			/**
+			 * @param out Can be null. If null ImGui::Text() is used otherwise ostream out.
+			 */
+			void optionalText(const GuiRenderOptions& options, bool forceOutput,
+					unsigned int deep, std::ostream* out, const char* fmt, ...)
+			{
+				if (!options.mUseSearchMode || forceOutput) {
+					va_list args;
+					va_start(args, fmt);
+					if (out) {
+						for (unsigned int i = 0; i < deep; ++i) {
+							(*out) << "\t";
+						}
+						char str[128];
+						vsnprintf(str, 128, fmt, args);
+						str[127] = 0;
+						(*out) << str << "\n";
+					}
+					else {
+						intentTextV(fmt, args);
+					}
+					va_end(args);
+				}
+			}
+
 			// return true if it was a valid template
 			bool changeNameIfTemplateObject(const NameValuePair& nvp,
 					std::string& name) {
@@ -49,33 +74,49 @@ namespace cfg
 				return true;
 			}
 
+			/**
+			 * @param out Can be null. If null ImGui::Text() is used otherwise ostream out.
+			 */
 			void insertNameValuePair(const NameValuePair &cfgPair, size_t index,
-					const GuiRenderOptions& options,
+					const GuiRenderOptions& options, unsigned int deep, std::ostream* out,
 					unsigned int& curContinuousEmptyCount);
 
+			/**
+			 * @param out Can be null. If null ImGui::Text() is used otherwise ostream out.
+			 */
 			void insertValue(const Value &cfgValue, bool useNameAsLabel,
 					const std::string& name, size_t index,
-					const GuiRenderOptions& options,
+					const GuiRenderOptions& options, unsigned int deep, std::ostream* out,
 					unsigned int& curContinuousEmptyCount, bool isTemplate = false)
 			{
 				bool isComplexArr = cfgValue.isComplexArray();
 				if ((cfgValue.isObject() && !cfgValue.mObject.empty()) || isComplexArr) {
+					if (useNameAsLabel && options.mUseSearchMode) {
+						useNameAsLabel = cfgValue.attributeExist(options.mSearchName, false, true, true);
+					}
 					if (useNameAsLabel) {
 						curContinuousEmptyCount = 0;
-						char strId[32];
-						snprintf(strId, 32, "node_%zu", index);
-						bool isOpened = ImGui::TreeNodeEx(strId,
-								isTemplate ? options.mImGuiTreeNodeFlagsForTemplate : options.mImGuiTreeNodeFlags,
-								isComplexArr ? "%s = []" : "%s", name.c_str());
-						if (!isOpened) {
-							return;
+						if (out) {
+							optionalText(options, true /* because its a node */,
+									deep, out, isComplexArr ? "%s = []" : "%s", name.c_str());
 						}
+						else {
+							char strId[32];
+							snprintf(strId, 32, "node_%zu", index);
+							bool isOpened = ImGui::TreeNodeEx(strId,
+									isTemplate ? options.mImGuiTreeNodeFlagsForTemplate : options.mImGuiTreeNodeFlags,
+									isComplexArr ? "%s = []" : "%s", name.c_str());
+							if (!isOpened) {
+								return;
+							}
+						}
+						++deep;
 					}
 					if (cfgValue.isObject()) {
 						size_t cnt = cfgValue.mObject.size();
 						for (size_t i = 0; i < cnt; ++i) {
 							insertNameValuePair(cfgValue.mObject[i], i,
-									options, curContinuousEmptyCount);
+									options, deep, out, curContinuousEmptyCount);
 						}
 					}
 					else {
@@ -83,46 +124,49 @@ namespace cfg
 						for (size_t i = 0; i < cnt; ++i) {
 							std::string name = "(element " + std::to_string(i) + ")";
 							insertValue(cfgValue.mArray[i], true, name, i,
-									options,
-								   curContinuousEmptyCount);
+									options, deep, out, curContinuousEmptyCount);
 						}
 					}
-					if (useNameAsLabel) {
+					if (useNameAsLabel && !out) {
 						ImGui::TreePop();
 					}
 					return;
 				}
 
 				std::string plainValue = tmlstring::plainValueToString(cfgValue);
+				bool forceOutput = (options.mUseSearchMode && options.mSearchName == plainValue);
 				if (plainValue.empty()) {
 					++curContinuousEmptyCount;
 					if (options.mMultipleEmptyLineLimit == -1 ||
 							int(curContinuousEmptyCount) <= options.mMultipleEmptyLineLimit) {
-						intentText("%s", plainValue.c_str());
+						optionalText(options, forceOutput, deep, out, "%s", plainValue.c_str());
 					}
 				}
 				else {
 					curContinuousEmptyCount = 0;
-					intentText("%s", plainValue.c_str());
+					optionalText(options, forceOutput, deep, out, "%s", plainValue.c_str());
 				}
 			}
 
+			/**
+			 * @param out Can be null. If null ImGui::Text() is used otherwise ostream out.
+			 */
 			void insertNameValuePair(const NameValuePair &cfgPair, size_t index,
-					const GuiRenderOptions& options,
+					const GuiRenderOptions& options, unsigned int deep, std::ostream* out,
 					unsigned int& curContinuousEmptyCount)
 			{
 				if (cfgPair.mName.isEmpty() && cfgPair.mValue.isEmpty()) {
 					++curContinuousEmptyCount;
 					if (options.mMultipleEmptyLineLimit == -1 ||
 							int(curContinuousEmptyCount) <= options.mMultipleEmptyLineLimit) {
-						intentText("");
+						optionalText(options, false, deep, out, "");
 					}
 					return;
 				}
 
 				if (cfgPair.mName.isComment() && cfgPair.mValue.isEmpty()) {
 					curContinuousEmptyCount = 0;
-					intentText("#%s", cfgPair.mName.mText.c_str());
+					optionalText(options, false, deep, out, "#%s", cfgPair.mName.mText.c_str());
 					return;
 				}
 
@@ -144,16 +188,17 @@ namespace cfg
 						isTemplate = changeNameIfTemplateObject(cfgPair, name);
 					}
 					insertValue(cfgPair.mValue, true, name, index,
-							options, curContinuousEmptyCount, isTemplate);
+							options, deep, out, curContinuousEmptyCount, isTemplate);
 					return;
 				}
 
+				bool forceOutput = (options.mUseSearchMode && options.mSearchName == name);
 				curContinuousEmptyCount = 0;
 				if (cfgPair.mValue.isEmpty()) {
-					intentText("%s", name.c_str());
+					optionalText(options, forceOutput, deep, out, "%s", name.c_str());
 				}
 				else {
-					intentText("%s = %s", name.c_str(),
+					optionalText(options, forceOutput, deep, out, "%s = %s", name.c_str(),
 							tmlstring::plainValueToString(cfgPair.mValue).c_str());
 				}
 			}
@@ -183,8 +228,10 @@ void cfg::gui::valueAsImguiTree(const std::string& internalLabelId,
 		ImGui::PushID(internalLabelId.c_str());
 	}
 	unsigned int curContinuousEmptyCount = 0;
+	unsigned int deep = 0;
+	std::ostream* out = nullptr;
 	insertValue(cfgValue, false, "", 0,
-			options, curContinuousEmptyCount);
+			options, deep, out, curContinuousEmptyCount);
 	if (!internalLabelId.empty()) {
 		ImGui::PopID();
 	}
@@ -197,10 +244,52 @@ void cfg::gui::nameValuePairAsImguiTree(const std::string& internalLabelId,
 		ImGui::PushID(internalLabelId.c_str());
 	}
 	unsigned int curContinuousEmptyCount = 0;
+	unsigned int deep = 0;
+	std::ostream* out = nullptr;
 	insertNameValuePair(cfgPair, 0,
-			options, curContinuousEmptyCount);
+			options, deep, out, curContinuousEmptyCount);
 	if (!internalLabelId.empty()) {
 		ImGui::PopID();
+	}
+}
+
+void cfg::gui::valueToStream(std::ostream& out, const Value& cfgValue,
+		const GuiRenderOptions& options)
+{
+	unsigned int curContinuousEmptyCount = 0;
+	unsigned int deep = 0;
+	insertValue(cfgValue, false, "", 0,
+			options, deep, &out, curContinuousEmptyCount);
+}
+
+void cfg::gui::nameValuePairToStream(std::ostream& out,
+		const NameValuePair& cfgPair, const GuiRenderOptions& options)
+{
+	unsigned int curContinuousEmptyCount = 0;
+	unsigned int deep = 0;
+	insertNameValuePair(cfgPair, 0,
+			options, deep, &out, curContinuousEmptyCount);
+}
+
+void cfg::gui::valueAsImguiTextEx(const Value& cfgValue,
+		const GuiRenderOptions& options)
+{
+	std::stringstream ss;
+	valueToStream(ss, cfgValue, options);
+	std::string line;
+	while (std::getline(ss, line)) {
+		ImGui::Text("%s", line.c_str());
+	}
+}
+
+void cfg::gui::nameValuePairAsImguiTextEx(const NameValuePair& cfgPair,
+		const GuiRenderOptions& options)
+{
+	std::stringstream ss;
+	nameValuePairToStream(ss, cfgPair, options);
+	std::string line;
+	while (std::getline(ss, line)) {
+		ImGui::Text("%s", line.c_str());
 	}
 }
 
