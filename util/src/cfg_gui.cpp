@@ -3,6 +3,7 @@
 #include <tml/tml_string.h>
 #include <imgui.h>
 #include <sstream>
+#include <string.h>
 
 namespace cfg
 {
@@ -77,15 +78,16 @@ namespace cfg
 			/**
 			 * @param out Can be null. If null ImGui::Text() is used otherwise ostream out.
 			 */
-			void insertNameValuePair(const NameValuePair &cfgPair, size_t index,
-					const GuiRenderOptions& options, unsigned int deep, std::ostream* out,
-					unsigned int& curContinuousEmptyCount);
+			void insertNameValuePair(const NameValuePair &cfgPair,
+					size_t index, std::vector<size_t>* indexStack,
+					const GuiRenderOptions& options, unsigned int deep,
+					std::ostream* out, unsigned int& curContinuousEmptyCount);
 
 			/**
 			 * @param out Can be null. If null ImGui::Text() is used otherwise ostream out.
 			 */
 			void insertValue(const Value &cfgValue, bool useNameAsLabel,
-					const std::string& name, size_t index,
+					const std::string& name, size_t index, std::vector<size_t>* indexStack,
 					const GuiRenderOptions& options, unsigned int deep, std::ostream* out,
 					unsigned int& curContinuousEmptyCount, bool isTemplate = false)
 			{
@@ -101,8 +103,29 @@ namespace cfg
 									deep, out, isComplexArr ? "%s = []" : "%s", name.c_str());
 						}
 						else {
-							char strId[32];
-							snprintf(strId, 32, "node_%zu", index);
+							char strId[64];
+							if (options.mUseSearchMode && indexStack) {
+								// for search mode tree nodes in the same sub level
+								// can have the same index because if some nodes
+								// are ignored at the presentation then tree nodes
+								// which are normally at different sub trees are
+								// can be now in the same sub tree with the same index
+								// and will produce the same tree node id.
+								// To avoid the same tree node id all parent indexes
+								// from the index stack are included.
+								std::stringstream ss;
+								ss << "node_";
+								for (size_t i : *indexStack) {
+									ss << "_" << i;
+								}
+								ss << "_" << index;
+								std::string id = ss.str();
+								strncpy(strId, id.c_str(), 64);
+							}
+							else {
+								snprintf(strId, 64, "node_%zu", index);
+							}
+							strId[63] = 0;
 							bool isOpened = ImGui::TreeNodeEx(strId,
 									isTemplate ? options.mImGuiTreeNodeFlagsForTemplate : options.mImGuiTreeNodeFlags,
 									isComplexArr ? "%s = []" : "%s", name.c_str());
@@ -113,18 +136,30 @@ namespace cfg
 						++deep;
 					}
 					if (cfgValue.isObject()) {
+						if (indexStack) {
+							indexStack->push_back(index);
+						}
 						size_t cnt = cfgValue.mObject.size();
 						for (size_t i = 0; i < cnt; ++i) {
-							insertNameValuePair(cfgValue.mObject[i], i,
+							insertNameValuePair(cfgValue.mObject[i], i, indexStack,
 									options, deep, out, curContinuousEmptyCount);
+						}
+						if (indexStack) {
+							indexStack->pop_back();
 						}
 					}
 					else {
+						if (indexStack) {
+							indexStack->push_back(index);
+						}
 						size_t cnt = cfgValue.mArray.size();
 						for (size_t i = 0; i < cnt; ++i) {
 							std::string name = "(element " + std::to_string(i) + ")";
-							insertValue(cfgValue.mArray[i], true, name, i,
+							insertValue(cfgValue.mArray[i], true, name, i, indexStack,
 									options, deep, out, curContinuousEmptyCount);
+						}
+						if (indexStack) {
+							indexStack->pop_back();
 						}
 					}
 					if (useNameAsLabel && !out) {
@@ -151,7 +186,8 @@ namespace cfg
 			/**
 			 * @param out Can be null. If null ImGui::Text() is used otherwise ostream out.
 			 */
-			void insertNameValuePair(const NameValuePair &cfgPair, size_t index,
+			void insertNameValuePair(const NameValuePair &cfgPair,
+					size_t index, std::vector<size_t>* indexStack,
 					const GuiRenderOptions& options, unsigned int deep, std::ostream* out,
 					unsigned int& curContinuousEmptyCount)
 			{
@@ -187,7 +223,7 @@ namespace cfg
 					if (options.mShowAdditionalTemplateInfosAtObjectName) {
 						isTemplate = changeNameIfTemplateObject(cfgPair, name);
 					}
-					insertValue(cfgPair.mValue, true, name, index,
+					insertValue(cfgPair.mValue, true, name, index, indexStack,
 							options, deep, out, curContinuousEmptyCount, isTemplate);
 					return;
 				}
@@ -227,10 +263,12 @@ void cfg::gui::valueAsImguiTree(const std::string& internalLabelId,
 	if (!internalLabelId.empty()) {
 		ImGui::PushID(internalLabelId.c_str());
 	}
+	std::vector<size_t> indexStack;
 	unsigned int curContinuousEmptyCount = 0;
 	unsigned int deep = 0;
 	std::ostream* out = nullptr;
 	insertValue(cfgValue, false, "", 0,
+			options.mUseSearchMode ? &indexStack : nullptr,
 			options, deep, out, curContinuousEmptyCount);
 	if (!internalLabelId.empty()) {
 		ImGui::PopID();
@@ -243,10 +281,12 @@ void cfg::gui::nameValuePairAsImguiTree(const std::string& internalLabelId,
 	if (!internalLabelId.empty()) {
 		ImGui::PushID(internalLabelId.c_str());
 	}
+	std::vector<size_t> indexStack;
 	unsigned int curContinuousEmptyCount = 0;
 	unsigned int deep = 0;
 	std::ostream* out = nullptr;
 	insertNameValuePair(cfgPair, 0,
+			options.mUseSearchMode ? &indexStack : nullptr,
 			options, deep, out, curContinuousEmptyCount);
 	if (!internalLabelId.empty()) {
 		ImGui::PopID();
@@ -258,7 +298,7 @@ void cfg::gui::valueToStream(std::ostream& out, const Value& cfgValue,
 {
 	unsigned int curContinuousEmptyCount = 0;
 	unsigned int deep = 0;
-	insertValue(cfgValue, false, "", 0,
+	insertValue(cfgValue, false, "", 0, nullptr,
 			options, deep, &out, curContinuousEmptyCount);
 }
 
@@ -267,7 +307,7 @@ void cfg::gui::nameValuePairToStream(std::ostream& out,
 {
 	unsigned int curContinuousEmptyCount = 0;
 	unsigned int deep = 0;
-	insertNameValuePair(cfgPair, 0,
+	insertNameValuePair(cfgPair, 0, nullptr,
 			options, deep, &out, curContinuousEmptyCount);
 }
 
