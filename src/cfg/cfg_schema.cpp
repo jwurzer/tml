@@ -255,7 +255,7 @@ namespace cfg {
 					}
 					addRv = addNVPSchema(nvp, nvfs.mObject.back(), outErrorMsg);
 					if (addRv == -1) {
-						return -1;
+						return false;
 					}
 				}
 				if (addRv == 0) {

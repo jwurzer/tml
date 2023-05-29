@@ -23,7 +23,7 @@ namespace cfg
 			int moveIndex = -1;
 			if (cfg.isObject()) {
 				const std::vector<NameValuePair>& obj = cfg.mObject;
-				size = obj.size();
+				size = static_cast<int>(obj.size());
 				int i = -1;
 				for (i = size - 1; i >= 0; --i) {
 					if (!obj[i].isEmptyOrComment()) {
@@ -54,7 +54,7 @@ namespace cfg
 			}
 			else if (cfg.isArray()) {
 				const std::vector<Value>& array = cfg.mArray;
-				size = array.size();
+				size = static_cast<int>(array.size());
 				int i = -1;
 				for (i = size - 1; i >= 0; --i) {
 					if (!array[i].isEmpty() && !array[i].isComment()) {
