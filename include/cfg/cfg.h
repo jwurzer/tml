@@ -268,7 +268,7 @@ namespace cfg
 		 *        should happend before parsing.
 		 * @param errMsg Can be null. If not null then the error message is
 		 *        stored (if an error happend).
-		 * @return Return the store count.
+		 * @return Return the store count or -1 for an error.
 		 */
 		int objectGet(const SelectRule *rules, bool allowRandomSequence,
 				bool allowUnusedValuePairs, bool allowEarlyReturn,
