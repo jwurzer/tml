@@ -357,6 +357,8 @@ namespace cfg
 		void setTextFloat(const std::string& attrName, float attrValue);
 		void setTextInt(const std::string& attrName, int attrValue);
 		void setTextText(const std::string& attrName, const std::string& attrValue);
+		// value is a empty array
+		void setTextArray(const std::string& attrName);
 		void setObject();
 		void setObject(const std::string &objectName);
 		bool isEmpty() const { return mName.mType == Value::TYPE_NONE &&
