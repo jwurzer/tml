@@ -539,6 +539,14 @@ namespace cfg
 				int limit = pairStartIndex + pairCount;
 				for (int i = 0; i < limit; ++i) {
 					bool isReplaced = false;
+					if (i < 0) {
+						outErrorMsg = "Apply templates: Out of range " + std::to_string(i) + " < 0. size: " + std::to_string(pairs.size());
+						return false;
+					}
+					if (i >= pairs.size()) {
+						outErrorMsg = "Apply templates: Out of range " + std::to_string(i) + " >= " + std::to_string(pairs.size());
+						return false;
+					}
 					NameValuePair* nvp = &pairs[i];
 					if (nvp->isObject()) {
 						int pairDiffCount = 0;
@@ -566,19 +574,28 @@ namespace cfg
 							if (insertCnt < 0) {
 								return false;
 							}
+
 							// --i --> jump one back --> repeat the template check at next iteration.
 							// This is necessary because the used template can
 							// also use a template ...
 							//--i;
 							i += insertCnt - 1; // this would be the opposite. omit all new added pairs
+							// i can be -1 if insertCnt is 0 and i was 0 --> result: -1
+							// this is no problem
 							outPairAddRemoveCount += insertCnt - 1;
 							isReplaced = true;
 							limit += insertCnt - 1;
+
 							// replaceTemplate() can change the pairs
 							// --> pairs maybe make a reallocation for increasing
 							// --> nvp is NOT valid any more
 							// --> reassign nvp to current name value pair
-							nvp = &pairs[i]; // VERY IMPORTANT!!!!!
+							if (i >= int(pairs.size())) {
+								outErrorMsg = "Apply templates: Out of range after replace " + std::to_string(i) + " >= " + std::to_string(pairs.size());
+								return false;
+							}
+							// set to null if insertCnt is 0. &pairs[i] is not always valid because i can be -1 if insertCnt is 0!
+							nvp = (insertCnt == 0) ? nullptr : &pairs[i]; // VERY IMPORTANT!!!!!
 
 							if (origValue.isObject()) {
 								if (insertCnt == 0) {
@@ -635,7 +652,8 @@ namespace cfg
 							isReplaced = true;
 						}
 					}
-					if (isUsingTemplate(nvp->mValue, keywordForUsingTemplate)) {
+					// nvp can be null here if insertCnt of replaceTemplate was 0
+					if (nvp && isUsingTemplate(nvp->mValue, keywordForUsingTemplate)) {
 						// only a simple replacement is allowed
 						if (!replaceSimpleTemplate(templateMap, nvp->mValue,
 								keywordForUsingTemplate,
