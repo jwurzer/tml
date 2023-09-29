@@ -41,6 +41,7 @@ namespace cfg
 		unsigned int getLineNumber() const { return mLineNumber; }
 		// return filename with linenumber and error message
 		std::string getExtendedErrorMsg() const;
+		int getErrorCode() const { return mErrorCode; }
 	private:
 		bool mReadFromFile;
 		std::string mFilename;

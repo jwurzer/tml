@@ -543,7 +543,7 @@ namespace cfg
 						outErrorMsg = "Apply templates: Out of range " + std::to_string(i) + " < 0. size: " + std::to_string(pairs.size());
 						return false;
 					}
-					if (i >= pairs.size()) {
+					if (i >= int(pairs.size())) {
 						outErrorMsg = "Apply templates: Out of range " + std::to_string(i) + " >= " + std::to_string(pairs.size());
 						return false;
 					}
