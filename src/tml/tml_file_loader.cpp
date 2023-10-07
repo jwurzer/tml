@@ -121,16 +121,36 @@ bool cfg::TmlFileLoader::loadAndPush(Value& outValue, std::string& outFullFilena
 		return false;
 	}
 	outFullFilename = getFullFilename(includeFilename);
-	mParser.setFilename(outFullFilename);
-	if (!mParser.getAsTree(outValue, inclEmptyLines, inclComments)) {
-		outErrorMsg = mParser.getExtendedErrorMsg();
-		// must happend after reading err msg with getExtendedErrorMsg()
-		// otherwise the error message is empty
-		mParser.reset();
-		outValue.clear();
-		return false;
+	bool loadWithParser = true;
+	std::string filenameKey;
+	if (mBuffering) {
+		char postFix[] = "::__";
+		postFix[2] = inclEmptyLines ? '1' : '0';
+		postFix[3] = inclComments ? '1' : '0';
+		filenameKey = outFullFilename + postFix;
+		TFileBufferMap::iterator it = mBufferedFiles.find(filenameKey);
+		if (it != mBufferedFiles.end()) {
+			// --> found a already buffered version!
+			outValue = it->second; // create a copy (no move etc.)
+			loadWithParser = false;
+		}
 	}
-	mParser.reset();
+	if (loadWithParser) {
+		mParser.setFilename(outFullFilename);
+		if (!mParser.getAsTree(outValue, inclEmptyLines, inclComments)) {
+			outErrorMsg = mParser.getExtendedErrorMsg();
+			// must happend after reading err msg with getExtendedErrorMsg()
+			// otherwise the error message is empty
+			mParser.reset();
+			outValue.clear();
+			return false;
+		}
+		mParser.reset();
+		if (mBuffering) {
+			// buffering is active --> filenameKey has already correct key (not empty)!
+			mBufferedFiles[filenameKey] = outValue; // create a copy (no move etc.)
+		}
+	}
 	push(includeFilename);
 	return true;
 }

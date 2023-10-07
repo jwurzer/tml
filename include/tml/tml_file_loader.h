@@ -4,6 +4,7 @@
 #include <cfg/file_loader.h>
 #include <tml/tml_parser.h>
 #include <vector>
+#include <map>
 
 namespace cfg
 {
@@ -18,9 +19,18 @@ namespace cfg
 				std::string& outErrorMsg) override;
 		virtual bool pop() override;
 		virtual unsigned int getNestedDeep() const override { return static_cast<unsigned int>(mPathStack.size()); }
+
+		void setBuffering(bool buffering) { mBuffering = buffering; }
+		void clearBufferedFiles() { mBufferedFiles.clear(); }
+		void clearAndResetBuffering() { mBufferedFiles.clear(); mBuffering = false; }
 	private:
+		typedef std::map<std::string, Value> TFileBufferMap;
+
 		TmlParser mParser;
 		std::vector<std::string> mPathStack;
+
+		bool mBuffering = false;
+		TFileBufferMap mBufferedFiles;
 
 		void push(const std::string& includeFilename);
 		std::string getCurrentDir() const;
