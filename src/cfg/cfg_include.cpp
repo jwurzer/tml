@@ -258,9 +258,13 @@ namespace
 			std::string fullFilename = loader.getFullFilename(includeFilename);
 			Value includeValue;
 			if (!includeOnce || currentIncludedFiles[fullFilename] == 0) {
-				includeValue = currentIncludedFileBuffers[fullFilename]; // create a copy (no move, no ref)
-				if (!includeValue.isObject()) {
-					// no object --> file not already buffered
+				TFileBufferMap::iterator it = currentIncludedFileBuffers.find(fullFilename);
+				if (it != currentIncludedFileBuffers.end()) {
+					// --> already buffered with all sub-includes
+					includeValue = it->second; // create a copy (no move, no ref)
+				}
+				else {
+					// not found --> file not already buffered
 					// --> read file and include all "sub-includes"
 					// If includeValue is an object then it also already includes all
 					// sub-includes (if sub-includes exist).
@@ -275,7 +279,16 @@ namespace
 								": " + outErrorMsg;
 						return false;
 					}
-					++currentIncludedFiles[outFullFilename];
+					if (outFullFilename != fullFilename) {
+						outErrorMsg = ": file loader has an invalid state (wrong full filename: " +
+								outFullFilename + " != " + fullFilename + ")";
+						// pop() because of successful loadAndPush().
+						// Although the file loader has already an invalid state.
+						// --> Maybe would nothing change by its invalid state.
+						loader.pop();
+						return false;
+					}
+					++currentIncludedFiles[fullFilename];
 
 					if (loader.getNestedDeep() != origPathDeep + 1) {
 						outErrorMsg = ": file loader has an invalid state (wrong nested deep).";
