@@ -359,6 +359,7 @@ namespace cfg
 		void setTextText(const std::string& attrName, const std::string& attrValue);
 		// value is a empty array
 		void setTextArray(const std::string& attrName);
+		void setComment(const std::string& text);
 		void setObject();
 		void setObject(const std::string &objectName);
 		bool isEmpty() const { return mName.mType == Value::TYPE_NONE &&

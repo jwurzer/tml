@@ -1063,6 +1063,12 @@ void cfg::NameValuePair::setTextArray(const std::string& attrName)
 
 }
 
+void cfg::NameValuePair::setComment(const std::string& text)
+{
+	mName.setComment(text);
+	mValue.clear();
+}
+
 void cfg::NameValuePair::setObject()
 {
 	mName.clear();

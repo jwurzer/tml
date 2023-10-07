@@ -48,7 +48,7 @@ namespace
 	}
 
 	bool includeFilesNoBuffering(Value& cfgValue, FileLoader& loader,
-			const std::string& includeKeyword, bool inclEmptyLines,
+			const std::string& includeKeyword, bool includeOnce, bool inclEmptyLines,
 			bool inclComments, std::string& outErrorMsg,
 			TFileMap& currentIncludedFiles, int currentDeep)
 	{
@@ -62,7 +62,7 @@ namespace
 			NameValuePair& nvp = pairs[i];
 			if (nvp.mValue.isObject()) {
 				// here currentDeep + 1 must be used because its a child
-				if (!includeFilesNoBuffering(nvp.mValue, loader, includeKeyword, inclEmptyLines,
+				if (!includeFilesNoBuffering(nvp.mValue, loader, includeKeyword, includeOnce, inclEmptyLines,
 						inclComments, outErrorMsg, currentIncludedFiles, currentDeep + 1)) {
 					// no outErrorMsg = nvp.mValue.getFilenameAndPosition() +
 					//		": " + outErrorMsg; here because outErrorMsg has already
@@ -76,62 +76,92 @@ namespace
 				continue;
 			}
 
+			// --> is a include statement and nvp.mName.mArray[1].mText is
+			// the filename from the include file.
+
+			const std::string& includeFilename = nvp.mName.mArray[1].mText;
+			std::string fullFilename = loader.getFullFilename(includeFilename);
 			Value includeValue;
-			std::string outFullFilename;
-			unsigned int origPathDeep = loader.getNestedDeep();
-			if (!loader.loadAndPush(includeValue, outFullFilename,
-					nvp.mName.mArray[1].mText, inclEmptyLines, inclComments,
-					outErrorMsg)) {
-				outErrorMsg = nvp.mName.getFilenameAndPosition() +
-						": " + outErrorMsg;
-				return false;
-			}
-			++currentIncludedFiles[outFullFilename];
+			if (!includeOnce || currentIncludedFiles[fullFilename] == 0) {
+				std::string outFullFilename;
+				unsigned int origPathDeep = loader.getNestedDeep();
+				if (!loader.loadAndPush(includeValue, outFullFilename,
+						includeFilename, inclEmptyLines, inclComments,
+						outErrorMsg)) {
+					outErrorMsg = nvp.mName.getFilenameAndPosition() +
+							": " + outErrorMsg;
+					return false;
+				}
+				if (outFullFilename != fullFilename) {
+					outErrorMsg = ": file loader has an invalid state (wrong full filename: " +
+							outFullFilename + " != " + fullFilename + ")";
+					// pop() because of successful loadAndPush().
+					// Although the file loader has already an invalid state.
+					// --> Maybe would nothing change by its invalid state.
+					loader.pop();
+					return false;
+				}
+				++currentIncludedFiles[outFullFilename];
 
-			if (loader.getNestedDeep() != origPathDeep + 1) {
-				outErrorMsg = ": file loader has an invalid state (wrong nested deep).";
-				// pop() because of successful loadAndPush().
-				// Although the file loader has already an invalid state.
-				// --> Maybe would nothing change by its invalid state.
-				loader.pop();
-				return false;
-			}
+				if (loader.getNestedDeep() != origPathDeep + 1) {
+					outErrorMsg = ": file loader has an invalid state (wrong nested deep).";
+					// pop() because of successful loadAndPush().
+					// Although the file loader has already an invalid state.
+					// --> Maybe would nothing change by its invalid state.
+					loader.pop();
+					return false;
+				}
 
-			if (loader.getNestedDeep() > MAX_RECURSIVE_DEEP) {
-				outErrorMsg = "Reach max deep for includes! Maybe a recursive loop. (deep " +
-						std::to_string(loader.getNestedDeep()) + ")";
-				loader.pop(); // very important also at error because this pop() is from successful loadAndPush()
-				return false;
-			}
+				if (loader.getNestedDeep() > MAX_RECURSIVE_DEEP) {
+					outErrorMsg = "Reach max deep for includes! Maybe a recursive loop. (deep " +
+							std::to_string(loader.getNestedDeep()) + ")";
+					loader.pop(); // very important also at error because this pop() is from successful loadAndPush()
+					return false;
+				}
 
-			// If a deep is defined than this is used as relative deep diff.
-			// If no deep is defined than the current deep of recursive calls
-			// (child deep) is used.
-			// Only moveDeepNumber(includeValue, nvp.mDeep); would be a problem
-			// because if no deep is defined (nvp.mDeep is -1) then no moving happend.
-			// Only moveDeepNumber(includeValue, currentDeep); would be an
-			// alternative. The current implementation respects also the stored
-			// deep in nvp.mDeep.
-			moveDeepNumber(includeValue, nvp.mDeep >= 0 ? nvp.mDeep : currentDeep);
+				// If a deep is defined than this is used as relative deep diff.
+				// If no deep is defined than the current deep of recursive calls
+				// (child deep) is used.
+				// Only moveDeepNumber(includeValue, nvp.mDeep); would be a problem
+				// because if no deep is defined (nvp.mDeep is -1) then no moving happend.
+				// Only moveDeepNumber(includeValue, currentDeep); would be an
+				// alternative. The current implementation respects also the stored
+				// deep in nvp.mDeep.
+				moveDeepNumber(includeValue, nvp.mDeep >= 0 ? nvp.mDeep : currentDeep);
 
-			// at includeFilesNoBuffering() call currentDeep and NOT currentDeep + 1 must be used.
-			if (!includeFilesNoBuffering(includeValue, loader, includeKeyword, inclEmptyLines,
-					inclComments, outErrorMsg, currentIncludedFiles, currentDeep)) {
-				loader.pop(); // very important also at error because this pop() is from successful loadAndPush()
-				outErrorMsg = nvp.mName.getFilenameAndPosition() +
-						": " + outErrorMsg;
-				return false;
-			}
+				// at includeFilesNoBuffering() call currentDeep and NOT currentDeep + 1 must be used.
+				if (!includeFilesNoBuffering(includeValue, loader, includeKeyword, includeOnce, inclEmptyLines,
+						inclComments, outErrorMsg, currentIncludedFiles, currentDeep)) {
+					loader.pop(); // very important also at error because this pop() is from successful loadAndPush()
+					outErrorMsg = nvp.mName.getFilenameAndPosition() +
+							": " + outErrorMsg;
+					return false;
+				}
 
-			if (!loader.pop()) {
-				outErrorMsg = nvp.mName.getFilenameAndPosition() +
-						": pop failed for file loader";
-				return false;
+				if (!loader.pop()) {
+					outErrorMsg = nvp.mName.getFilenameAndPosition() +
+							": pop failed for file loader";
+					return false;
+				}
+				if (loader.getNestedDeep() != origPathDeep) {
+					outErrorMsg = nvp.mName.getFilenameAndPosition() +
+							": file loader has an invalid state (wrong nested deep).";
+					return false;
+				}
 			}
-			if (loader.getNestedDeep() != origPathDeep) {
-				outErrorMsg = nvp.mName.getFilenameAndPosition() +
-						": file loader has an invalid state (wrong nested deep).";
-				return false;
+			else {
+				// includeOnce is true AND include file is already included!
+				// --> simple include a empty object
+				includeValue.setObject();
+				if (inclComments) {
+					includeValue.mObject.emplace_back();
+					includeValue.mObject.back().setComment(" " + includeFilename + " is already included");
+				}
+				else if (inclEmptyLines) {
+					includeValue.mObject.emplace_back();
+				}
+
+				moveDeepNumber(includeValue, nvp.mDeep >= 0 ? nvp.mDeep : currentDeep);
 			}
 
 			// NOW here! Inside includeValue all includes are replaced by their contents
@@ -142,7 +172,7 @@ namespace
 				// Should not be really possible. A loaded file should be
 				// always an object.
 				outErrorMsg = nvp.mName.getFilenameAndPosition() +
-						": " + nvp.mName.mArray[1].mText + " is not loaded as object.";
+						": " + includeFilename + " is not loaded as object.";
 				return false;
 			}
 
@@ -152,14 +182,13 @@ namespace
 			if (nvp.mValue.isObject()) {
 				if (includeValue.mObject.empty()) {
 					outErrorMsg = nvp.mName.getFilenameAndPosition() +
-							": " + nvp.mName.mArray[1].mText +
+							": " + includeFilename +
 							" is as empty object. Can't add child object.";
 					return false;
 				}
 				if (!includeValue.mObject.back().mValue.isEmpty()) {
 					outErrorMsg = nvp.mName.getFilenameAndPosition() +
-							": Last name-value-pair of " +
-							nvp.mName.mArray[1].mText +
+							": Last name-value-pair of " + includeFilename +
 							" has no empty value. Can't add child object.";
 					return false;
 				}
@@ -190,7 +219,7 @@ namespace
 	typedef std::map<std::string, Value> TFileBufferMap;
 
 	bool includeFilesWithFileBuffering(Value& cfgValue, FileLoader& loader,
-			const std::string& includeKeyword, bool inclEmptyLines,
+			const std::string& includeKeyword, bool includeOnce, bool inclEmptyLines,
 			bool inclComments, std::string& outErrorMsg,
 			TFileMap& currentIncludedFiles,
 			TFileBufferMap& currentIncludedFileBuffers,
@@ -207,7 +236,7 @@ namespace
 			if (nvp.mValue.isObject()) {
 				// here currentDeep + 1 must be used because its a child
 				if (!includeFilesWithFileBuffering(nvp.mValue, loader,
-						includeKeyword, inclEmptyLines, inclComments,
+						includeKeyword, includeOnce, inclEmptyLines, inclComments,
 						outErrorMsg, currentIncludedFiles,
 						currentIncludedFileBuffers, currentDeep + 1)) {
 					// no outErrorMsg = nvp.mValue.getFilenameAndPosition() +
@@ -222,84 +251,104 @@ namespace
 				continue;
 			}
 
-			std::string fullFilename = loader.getFullFilename(
-					nvp.mName.mArray[1].mText);
-			Value includeValue = currentIncludedFileBuffers[fullFilename]; // create a copy (no move, no ref)
-			if (!includeValue.isObject()) {
-				// no object --> file not already buffered
-				// --> read file and include all "sub-includes"
-				// If includeValue is an object then it also already includes all
-				// sub-includes (if sub-includes exist).
+			// --> is a include statement and nvp.mName.mArray[1].mText is
+			// the filename from the include file.
 
-				std::string outFullFilename;
-				unsigned int origPathDeep = loader.getNestedDeep();
-				if (!loader.loadAndPush(includeValue, outFullFilename,
-						nvp.mName.mArray[1].mText, inclEmptyLines,
-						inclComments,
-						outErrorMsg)) {
-					outErrorMsg = nvp.mName.getFilenameAndPosition() +
-							": " + outErrorMsg;
-					return false;
-				}
-				++currentIncludedFiles[outFullFilename];
+			const std::string& includeFilename = nvp.mName.mArray[1].mText;
+			std::string fullFilename = loader.getFullFilename(includeFilename);
+			Value includeValue;
+			if (!includeOnce || currentIncludedFiles[fullFilename] == 0) {
+				includeValue = currentIncludedFileBuffers[fullFilename]; // create a copy (no move, no ref)
+				if (!includeValue.isObject()) {
+					// no object --> file not already buffered
+					// --> read file and include all "sub-includes"
+					// If includeValue is an object then it also already includes all
+					// sub-includes (if sub-includes exist).
 
-				if (loader.getNestedDeep() != origPathDeep + 1) {
-					outErrorMsg = ": file loader has an invalid state (wrong nested deep).";
-					// pop() because of successful loadAndPush().
-					// Although the file loader has already an invalid state.
-					// --> Maybe would nothing change by its invalid state.
-					loader.pop();
-					return false;
+					std::string outFullFilename;
+					unsigned int origPathDeep = loader.getNestedDeep();
+					if (!loader.loadAndPush(includeValue, outFullFilename,
+							nvp.mName.mArray[1].mText, inclEmptyLines,
+							inclComments,
+							outErrorMsg)) {
+						outErrorMsg = nvp.mName.getFilenameAndPosition() +
+								": " + outErrorMsg;
+						return false;
+					}
+					++currentIncludedFiles[outFullFilename];
+
+					if (loader.getNestedDeep() != origPathDeep + 1) {
+						outErrorMsg = ": file loader has an invalid state (wrong nested deep).";
+						// pop() because of successful loadAndPush().
+						// Although the file loader has already an invalid state.
+						// --> Maybe would nothing change by its invalid state.
+						loader.pop();
+						return false;
+					}
+
+					if (loader.getNestedDeep() > MAX_RECURSIVE_DEEP) {
+						outErrorMsg =
+								"Reach max deep for includes! Maybe a recursive loop. (deep " +
+										std::to_string(
+												loader.getNestedDeep()) +
+										")";
+						loader.pop(); // very important also at error because this pop() is from successful loadAndPush()
+						return false;
+					}
+
+					// at includeFilesWithFileBuffering() call currentDeep and NOT currentDeep + 1 must be used.
+					if (!includeFilesWithFileBuffering(includeValue, loader,
+							includeKeyword, includeOnce, inclEmptyLines, inclComments,
+							outErrorMsg, currentIncludedFiles,
+							currentIncludedFileBuffers, currentDeep)) {
+						loader.pop(); // very important also at error because this pop() is from successful loadAndPush()
+						outErrorMsg = nvp.mName.getFilenameAndPosition() +
+								": " + outErrorMsg;
+						return false;
+					}
+
+					if (!loader.pop()) {
+						outErrorMsg = nvp.mName.getFilenameAndPosition() +
+								": pop failed for file loader";
+						return false;
+					}
+					if (loader.getNestedDeep() != origPathDeep) {
+						outErrorMsg = nvp.mName.getFilenameAndPosition() +
+								": file loader has an invalid state (wrong nested deep).";
+						return false;
+					}
+					// copy back to file buffers
+					currentIncludedFileBuffers[fullFilename] = includeValue;
 				}
 
-				if (loader.getNestedDeep() > MAX_RECURSIVE_DEEP) {
-					outErrorMsg =
-							"Reach max deep for includes! Maybe a recursive loop. (deep " +
-									std::to_string(
-											loader.getNestedDeep()) +
-									")";
-					loader.pop(); // very important also at error because this pop() is from successful loadAndPush()
-					return false;
-				}
-
-				// at includeFilesWithFileBuffering() call currentDeep and NOT currentDeep + 1 must be used.
-				if (!includeFilesWithFileBuffering(includeValue, loader,
-						includeKeyword, inclEmptyLines, inclComments,
-						outErrorMsg, currentIncludedFiles,
-						currentIncludedFileBuffers, currentDeep)) {
-					loader.pop(); // very important also at error because this pop() is from successful loadAndPush()
-					outErrorMsg = nvp.mName.getFilenameAndPosition() +
-							": " + outErrorMsg;
-					return false;
-				}
-
-				if (!loader.pop()) {
-					outErrorMsg = nvp.mName.getFilenameAndPosition() +
-							": pop failed for file loader";
-					return false;
-				}
-				if (loader.getNestedDeep() != origPathDeep) {
-					outErrorMsg = nvp.mName.getFilenameAndPosition() +
-							": file loader has an invalid state (wrong nested deep).";
-					return false;
-				}
-				// copy back to file buffers
-				currentIncludedFileBuffers[fullFilename] = includeValue;
+				// If a deep is defined than this is used as relative deep diff.
+				// If no deep is defined than the current deep of recursive calls
+				// (child deep) is used.
+				// Only moveDeepNumber(includeValue, nvp.mDeep); would be a problem
+				// because if no deep is defined (nvp.mDeep is -1) then no moving happend.
+				// Only moveDeepNumber(includeValue, currentDeep); would be an
+				// alternative. The current implementation respects also the stored
+				// deep in nvp.mDeep.
+				// moveDeepNumber must be happened after storing into file buffer
+				// because multiple includes can have different indention.
+				// The version without buffering can already call this function
+				// after file loading before the recursive call for children.
+				moveDeepNumber(includeValue, nvp.mDeep >= 0 ? nvp.mDeep : currentDeep);
 			}
+			else {
+				// includeOnce is true AND include file is already included!
+				// --> simple include a empty object
+				includeValue.setObject();
+				if (inclComments) {
+					includeValue.mObject.emplace_back();
+					includeValue.mObject.back().setComment(" " + includeFilename + " is already included");
+				}
+				else if (inclEmptyLines) {
+					includeValue.mObject.emplace_back();
+				}
 
-			// If a deep is defined than this is used as relative deep diff.
-			// If no deep is defined than the current deep of recursive calls
-			// (child deep) is used.
-			// Only moveDeepNumber(includeValue, nvp.mDeep); would be a problem
-			// because if no deep is defined (nvp.mDeep is -1) then no moving happend.
-			// Only moveDeepNumber(includeValue, currentDeep); would be an
-			// alternative. The current implementation respects also the stored
-			// deep in nvp.mDeep.
-			// moveDeepNumber must be happened after storing into file buffer
-			// because multiple includes can have different indention.
-			// The version without buffering can already call this function
-			// after file loading before the recursive call for children.
-			moveDeepNumber(includeValue, nvp.mDeep >= 0 ? nvp.mDeep : currentDeep);
+				moveDeepNumber(includeValue, nvp.mDeep >= 0 ? nvp.mDeep : currentDeep);
+			}
 
 			// NOW here! Inside includeValue all includes are replaced by their contents
 			// --> no "include statement" exist in includeValue because of
@@ -309,8 +358,7 @@ namespace
 				// Should not be really possible. A loaded file should be
 				// always an object.
 				outErrorMsg = nvp.mName.getFilenameAndPosition() +
-						": " + nvp.mName.mArray[1].mText +
-						" is not loaded as object.";
+						": " + includeFilename + " is not loaded as object.";
 				return false;
 			}
 
@@ -320,14 +368,13 @@ namespace
 			if (nvp.mValue.isObject()) {
 				if (includeValue.mObject.empty()) {
 					outErrorMsg = nvp.mName.getFilenameAndPosition() +
-							": " + nvp.mName.mArray[1].mText +
+							": " + includeFilename +
 							" is as empty object. Can't add child object.";
 					return false;
 				}
 				if (!includeValue.mObject.back().mValue.isEmpty()) {
 					outErrorMsg = nvp.mName.getFilenameAndPosition() +
-							": Last name-value-pair of " +
-							nvp.mName.mArray[1].mText +
+							": Last name-value-pair of " + includeFilename +
 							" has no empty value. Can't add child object.";
 					return false;
 				}
@@ -359,7 +406,7 @@ namespace
 
 bool cfg::inc::loadAndIncludeFiles(Value& outValue, TFileMap& outIncludedFiles,
 		const std::string& filename, FileLoader& loader,
-		const std::string& includeKeyword,
+		const std::string& includeKeyword, bool includeOnce,
 		bool inclEmptyLines, bool inclComments, bool withFileBuffering,
 		std::string& outErrorMsg)
 {
@@ -380,8 +427,9 @@ bool cfg::inc::loadAndIncludeFiles(Value& outValue, TFileMap& outIncludedFiles,
 		outValue.clear();
 		return false;
 	}
-	bool rv = includeFiles(outValue, loader, includeKeyword, inclEmptyLines,
-			inclComments, withFileBuffering, outErrorMsg, outIncludedFiles, 0);
+	bool rv = includeFiles(outValue, loader, includeKeyword, includeOnce,
+			inclEmptyLines, inclComments, withFileBuffering, outErrorMsg,
+			outIncludedFiles, 0);
 	if (!rv) {
 		outValue.clear();
 	}
@@ -399,31 +447,33 @@ bool cfg::inc::loadAndIncludeFiles(Value& outValue, TFileMap& outIncludedFiles,
 }
 
 bool cfg::inc::includeFiles(Value& cfgValue, FileLoader& loader,
-		const std::string& includeKeyword, bool inclEmptyLines,
-		bool inclComments, bool withFileBuffering, std::string& outErrorMsg)
+		const std::string& includeKeyword, bool includeOnce,
+		bool inclEmptyLines, bool inclComments,
+		bool withFileBuffering, std::string& outErrorMsg)
 {
 	TFileMap currentIncludedFiles;
-	return includeFiles(cfgValue, loader, includeKeyword, inclEmptyLines,
-			inclComments, withFileBuffering, outErrorMsg,
+	return includeFiles(cfgValue, loader, includeKeyword, includeOnce,
+			inclEmptyLines, inclComments, withFileBuffering, outErrorMsg,
 			currentIncludedFiles, 0);
 }
 
 bool cfg::inc::includeFiles(Value& cfgValue, FileLoader& loader,
-		const std::string& includeKeyword, bool inclEmptyLines,
-		bool inclComments, bool withFileBuffering, std::string& outErrorMsg,
+		const std::string& includeKeyword, bool includeOnce,
+		bool inclEmptyLines, bool inclComments,
+		bool withFileBuffering, std::string& outErrorMsg,
 		TFileMap& currentIncludedFiles, int currentDeep)
 {
 	if (withFileBuffering) {
 		TFileBufferMap currentIncludedFileBuffers;
 
 		return includeFilesWithFileBuffering(cfgValue, loader,
-				includeKeyword, inclEmptyLines, inclComments, outErrorMsg,
+				includeKeyword, includeOnce, inclEmptyLines, inclComments, outErrorMsg,
 				currentIncludedFiles, currentIncludedFileBuffers,
 				currentDeep);
 	}
 	else {
 		return includeFilesNoBuffering(cfgValue, loader,
-				includeKeyword, inclEmptyLines, inclComments, outErrorMsg,
+				includeKeyword, includeOnce, inclEmptyLines, inclComments, outErrorMsg,
 				currentIncludedFiles, currentDeep);
 	}
 }

@@ -38,6 +38,8 @@ namespace
 				"  variables <filename>         ... load and print variables from tml file\n" <<
 				"  include <filename>           ... load tml file and include all other tml files and print it\n" <<
 				"  include-buf <filename>       ... load tml file and include all other tml files and print it (with file buffering)\n" <<
+				"  include-once <filename>      ... load tml file and include all other tml files and print it (only once)\n" <<
+				"  include-once-buf <filename>  ... load tml file and include all other tml files and print it (only once, with file buffering)\n" <<
 				"  print-tml-entries <filename> ... print each tml entry per line\n" <<
 				"  printjson <filename>         ... print the json file\n" <<
 				"  printjson2tml <filename>     ... print the json file as tml\n" <<
@@ -252,7 +254,7 @@ namespace
 		return 0;
 	}
 
-	int includeAndPrint(const char* filename, bool inclEmptyLines,
+	int includeAndPrint(const char* filename, bool includeOnce, bool inclEmptyLines,
 			bool inclComments, bool withFileBuffering, bool forceDeepByStoredDeepValue)
 	{
 		cfg::TmlFileLoader loader;
@@ -260,7 +262,7 @@ namespace
 		std::string outErrorMsg;
 		cfg::inc::TFileMap includedFiles;
 		if (!cfg::inc::loadAndIncludeFiles(value, includedFiles, filename, loader,
-				"include", inclEmptyLines, inclComments, withFileBuffering,
+				"include", includeOnce, inclEmptyLines, inclComments, withFileBuffering,
 				outErrorMsg)) {
 			std::cerr << "parse/includes for " << filename << " failed" << std::endl;
 			std::cerr << "error: " << outErrorMsg << std::endl;
@@ -572,13 +574,16 @@ int main(int argc, char* argv[])
 		}
 		return loadAndPrintVariables(argv[2]);
 	}
-	if (command == "include" || command == "include-buf") {
+	if (command == "include" || command == "include-buf" ||
+			command == "include-once" || command == "include-once-buf") {
 		if (argc != 3) {
 			std::cerr << "include command need exactly one argument/filename" << std::endl;
 			printHelp(argv[0]);
 			return 1;
 		}
-		return includeAndPrint(argv[2], true, true, command == "include-buf", false);
+		return includeAndPrint(argv[2],
+				command == "include-once" || command == "include-once-buf", true, true,
+				command == "include-buf" || command == "include-once-buf", false);
 	}
 	if (command == "print-tml-entries") {
 		if (argc != 3) {
