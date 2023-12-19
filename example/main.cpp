@@ -49,7 +49,7 @@ namespace
 				"  printcppexample              ... print the cpp example\n" <<
 				"  interpreter-tests            ... some unit-tests for interpreter\n" <<
 				"  interpret <filename>         ... evaluate expressions\n" <<
-				"  all-features <filename>      ... templates, variables, expressions\n" <<
+				"  all-features <in-name> [<out-name>]     ... includes, templates, translations, profiles, variables, expressions\n" <<
 				"  validate <schema-filename> <filename>   ... validate\n" <<
 				std::endl;
 	}
@@ -412,43 +412,115 @@ namespace
 		return 0;
 	}
 
-	int allFeatures(const char* filename)
+	int allFeatures(const char* filename, bool printAfterEachStep, const char* outputFilename)
 	{
-		cfg::TmlParser p(filename);
-		cfg::NameValuePair cvp;
-		if (!p.getAsTree(cvp, true, true)) {
-			std::cerr << "parse " << filename << " failed" << std::endl;
-			std::cerr << "error: " << p.getExtendedErrorMsg() << std::endl;
+		if (printAfterEachStep) {
+			cfg::TmlParser p(filename);
+			cfg::NameValuePair cvp;
+			if (!p.getAsTree(cvp, true, true)) {
+				std::cerr << "parse " << filename << " failed" << std::endl;
+				std::cerr << "error: " << p.getExtendedErrorMsg() << std::endl;
+				return 1;
+			}
+			cfg::Value& value = cvp.mValue;
+			std::cout << "==================== original ====================" << std::endl;
+			std::string s = cfg::tmlstring::valueToString(0, value);
+			std::cout << s << std::endl;
+		}
+
+		cfg::TmlFileLoader loader;
+		cfg::Value value;
+		std::string outErrorMsg;
+		cfg::inc::TFileMap includedFiles;
+		bool includeOnce = true;
+		bool inclEmptyLines = false;
+		bool inclComments = false;
+		bool withFileBuffering = true;
+		if (!cfg::inc::loadAndIncludeFiles(value, includedFiles, filename, loader,
+				"include", includeOnce, inclEmptyLines, inclComments, withFileBuffering,
+				outErrorMsg)) {
+			std::cerr << "parse/includes for " << filename << " failed" << std::endl;
+			std::cerr << "error: " << outErrorMsg << std::endl;
 			return 1;
 		}
-		cfg::Value& value = cvp.mValue;
-		std::cout << "==================== original ====================" << std::endl;
-		std::string s = cfg::tmlstring::valueToString(0, value);
-		std::cout << s << std::endl;
 
-
-		std::string errorMsg;
-		std::string languageId;
-		if (!cfg::cfgtr::applyTranslations(value, "translations",
-				"tr(", languageId, errorMsg)) {
-			std::cout << "============ apply translations FAILED ===========" << std::endl;
-			std::cout << errorMsg << std::endl;
-			return 1;
+		if (printAfterEachStep) {
+			std::cout << "==================== with includes ====================" << std::endl;
+			std::string s = cfg::tmlstring::valueToString(0, value);
+			std::cout << s << std::endl;
 		}
-		std::cout << "============ after apply translations ============" << std::endl;
-		s = cfg::tmlstring::valueToString(0, value);
-		std::cout << s << std::endl;
 
-
-		if (!cfg::cfgtr::applyVariables(value, "variables",
-				"$(", errorMsg)) {
-			std::cout << "============= apply variables FAILED =============" << std::endl;
-			std::cout << errorMsg << std::endl;
-			return 1;
+		{
+			cfg::cfgtemp::TemplateMap templateMap;
+			std::string errorMsg;
+			if (!cfg::cfgtemp::addTemplates(templateMap, value, true, "template",
+					errorMsg)) {
+				std::cout << "============ add templates FAILED ===========" << std::endl;
+				std::cout << errorMsg << std::endl;
+				return 1;
+			}
+			if (!cfg::cfgtemp::useTemplates(templateMap, value,
+					"use-template", true, false, errorMsg)) {
+				std::cout << "============ use templates FAILED ===========" << std::endl;
+				std::cout << errorMsg << std::endl;
+				return 1;
+			}
+			if (printAfterEachStep) {
+				std::cout << "============ after apply templates ============" << std::endl;
+				std::string s = cfg::tmlstring::valueToString(0, value);
+				std::cout << s << std::endl;
+			}
 		}
-		std::cout << "============== after apply variables =============" << std::endl;
-		s = cfg::tmlstring::valueToString(0, value);
-		std::cout << s << std::endl;
+
+		{
+			std::string errorMsg;
+			std::string languageId; // empty --> applyTranslations() uses the first available one
+			//std::string languageId = "EN";
+			if (!cfg::cfgtr::applyTranslations(value, "translations",
+					"tr(", languageId, errorMsg)) {
+				std::cout << "============ apply translations FAILED ===========" << std::endl;
+				std::cout << errorMsg << std::endl;
+				return 1;
+			}
+			if (printAfterEachStep) {
+				std::cout << "============ after apply translations ============" << std::endl;
+				std::string s = cfg::tmlstring::valueToString(0, value);
+				std::cout << s << std::endl;
+			}
+		}
+
+		{
+			std::string errorMsg;
+			std::string profileId; // empty --> applyTranslations() uses the first available one
+			//std::string profileId = "P1";
+			cfg::cfgtr::LanguageMap languageMap;
+			if (!cfg::cfgtr::applyTranslations(value, "profiles",
+					"pr(", profileId, errorMsg)) {
+				std::cout << "============ apply translations for profiles FAILED ===========" << std::endl;
+				std::cout << errorMsg << std::endl;
+				return 1;
+			}
+			if (printAfterEachStep) {
+				std::cout << "============ after apply profiles ============" << std::endl;
+				std::string s = cfg::tmlstring::valueToString(0, value);
+				std::cout << s << std::endl;
+			}
+		}
+
+		{
+			std::string errorMsg;
+			if (!cfg::cfgtr::applyVariables(value, "variables",
+					"$(", errorMsg)) {
+				std::cout << "============= apply variables FAILED =============" << std::endl;
+				std::cout << errorMsg << std::endl;
+				return 1;
+			}
+			if (printAfterEachStep) {
+				std::cout << "============== after apply variables =============" << std::endl;
+				std::string s = cfg::tmlstring::valueToString(0, value);
+				std::cout << s << std::endl;
+			}
+		}
 
 		std::stringstream errMsg;
 		if (cfg::interpreter::interpretAndReplace(value, false, true, true, true, errMsg) == -1) {
@@ -456,13 +528,22 @@ namespace
 			std::cout << errMsg.str() << std::endl;
 			return 1;
 		}
-		std::cout << "=========== after evaluate expressions ===========" << std::endl;
-		s = cfg::tmlstring::valueToString(0, value);
-		std::cout << s << std::endl;
+		if (printAfterEachStep) {
+			std::cout << "=========== after evaluate expressions ===========" << std::endl;
+			std::string s = cfg::tmlstring::valueToString(0, value);
+			std::cout << s << std::endl;
+			std::cout << "=========== EOF ===========" << std::endl;
+		}
+		if (outputFilename) {
+			std::ofstream file(outputFilename);
+			std::string s = cfg::tmlstring::valueToString(0, value);
+			file << s;
+			file.close();
+		}
 		return 0;
 	}
 
-	int validate(const char* schemaFilename, const char* filename)
+	int validate(const char* schemaFilename, const char* /*filename*/)
 	{
 		cfg::TmlParser schemaParser(schemaFilename);
 		cfg::NameValuePair schemaCvp;
@@ -651,12 +732,12 @@ int main(int argc, char* argv[])
 		return interpret(argv[2]);
 	}
 	if (command == "all-features") {
-		if (argc != 3) {
-			std::cerr << "all-features command need exactly one argument/filename" << std::endl;
+		if (argc != 3 && argc != 4) {
+			std::cerr << "all-features command a filename and optional output-filename" << std::endl;
 			printHelp(argv[0]);
 			return 1;
 		}
-		return allFeatures(argv[2]);
+		return allFeatures(argv[2], argc == 3, argc >= 4 ? argv[3] : nullptr);
 	}
 	if (command == "validate") {
 		if (argc != 4) {
