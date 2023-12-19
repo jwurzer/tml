@@ -37,18 +37,49 @@ namespace cfg
 			}
 		}
 
-		std::string getTextForTml(const std::string& text)
+		std::string getTextForTml(const std::string& text,
+				bool forceTextWithQuotes)
 		{
 			if (text.empty()) {
 				return "\"\"";
 			}
 			std::size_t len = text.length();
 			bool mustBeEscaped = false;
-			for (std::size_t i = 0; i < len; ++i) {
-				char ch = text[i];
-				if (ch == ' ' || ch == '\t' || ch == '\n' || ch == '\\' || ch == '"') {
+			if (forceTextWithQuotes) {
+				mustBeEscaped = true;
+			}
+			else {
+				bool isNumber = true;
+				bool numberWithFloatingPoint = false;
+				for (std::size_t i = 0; i < len; ++i) {
+					char ch = text[i];
+					if (ch == ' ' || ch == '\t' || ch == '\n' || ch == '\\' || ch == '"') {
+						mustBeEscaped = true;
+						break;
+					}
+					if (isNumber) {
+						if ((i == 0 && (ch == '+' || ch == '-')) ||
+								(ch >= '0' && ch <= '9')) {
+							continue;
+						}
+						if (ch == '.') {
+							if (!numberWithFloatingPoint) {
+								// --> first dot --> can be a floating point number
+								numberWithFloatingPoint = true;
+							}
+							else {
+								// --> second dot --> can be a number
+								isNumber = false;
+								numberWithFloatingPoint = false;
+							}
+							continue;
+						}
+						// --> can't be a number
+						isNumber = false;
+					}
+				}
+				if (isNumber) {
 					mustBeEscaped = true;
-					break;
 				}
 			}
 			if (!mustBeEscaped && text != "true" && text != "false" && text != "null") {
@@ -90,14 +121,29 @@ namespace cfg
 				case Value::TYPE_BOOL:
 					ss << (cfgValue.mBool ? "true" : "false");
 					break;
-				case Value::TYPE_FLOAT:
-					ss << cfgValue.mFloatingPoint;
+				case Value::TYPE_FLOAT: {
+					// also a dot is used! otherwise it will be interpreted as int instead of a float.
+					std::stringstream tmpSs;
+					tmpSs.imbue(std::locale()); // --> always use a dot and no comma etc.
+					tmpSs << cfgValue.mFloatingPoint;
+					std::string fp = tmpSs.str();
+					bool dotIncluded = false;
+					for (char c : fp) {
+						if (c == '.') {
+							dotIncluded = true;
+						}
+					}
+					ss << fp;
+					if (!dotIncluded) {
+						ss << ".0";
+					}
 					break;
+				}
 				case Value::TYPE_INT:
 					ss << cfgValue.mInteger;
 					break;
 				case Value::TYPE_TEXT:
-					ss << getTextForTml(cfgValue.mText);
+					ss << getTextForTml(cfgValue.mText, cfgValue.mParseTextWithQuotes);
 					break;
 				default:
 					ss << "ERROR";
