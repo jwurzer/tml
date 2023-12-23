@@ -140,6 +140,7 @@ namespace cfg
 		void setFloatingPoint(float value);
 		void setInteger(int value, unsigned int parseBase = 10);
 		void setText(const std::string& text, bool parseTextWithQuotes = false);
+		//void setText(const char* textBegin, const char* textEndNullTermination, bool parseTextWithQuotes = false);
 		void setComment(const std::string& text);
 		void setArray();
 		void setObject();

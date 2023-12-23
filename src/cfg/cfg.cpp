@@ -327,6 +327,19 @@ void cfg::Value::setText(const std::string& text, bool parseTextWithQuotes)
 	mText = text;
 }
 
+#if 0
+void cfg::Value::setText(const char* textBegin,
+		const char* textEndNullTermination, bool parseTextWithQuotes)
+{
+	clear();
+	mType = TYPE_TEXT;
+	mParseTextWithQuotes = parseTextWithQuotes;
+	//mText = std::string(textBegin, textEndNullTermination);
+	mText.reserve(textEndNullTermination - textBegin + 1);
+	mText = textBegin;
+}
+#endif
+
 void cfg::Value::setComment(const std::string& text)
 {
 	clear();

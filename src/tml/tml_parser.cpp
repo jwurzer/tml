@@ -461,6 +461,7 @@ int cfg::TmlParser::getNextTmlEntry(std::string& utf8Line, NameValuePair& entry,
 			}
 		}
 		const char* word = utf8Line.c_str() + wordStartIndex;
+		//unsigned int wordLen = i - wordStartIndex;
 		if (i < len) {
 			ch = utf8Line[i];
 			utf8Line[i] = '\0';
@@ -494,6 +495,7 @@ int cfg::TmlParser::getNextTmlEntry(std::string& utf8Line, NameValuePair& entry,
 			// In this case isOnlyText is true which means it was a text
 			// with quotes like "foo"
 			value->setText(word, true);
+			//value->setText(word, word + wordLen, true);
 		}
 		else if (isNumber && digitCount && dotCount == 0) {
 			//std::cout << "type: int" << std::endl;
@@ -535,6 +537,7 @@ int cfg::TmlParser::getNextTmlEntry(std::string& utf8Line, NameValuePair& entry,
 			// it's a text without quotes like foo instead of "foo"
 			//std::cout << "type: text" << std::endl;
 			value->setText(word, false);
+			//value->setText(word, word + wordLen, false);
 		}
 		value->mLineNumber = lineNumber;
 		value->mOffset = wordStartIndex + 1;
@@ -896,4 +899,36 @@ bool cfg::TmlParser::getAsTree(Value &root,
 std::string cfg::TmlParser::getExtendedErrorMsg() const
 {
 	return mFilename + ":" + std::to_string(mLineNumber) + ": " + mErrorMsg;
+}
+
+cfg::Value cfg::tmlparser::getValueFromString(const std::string& tml,
+		bool inclEmptyLines, bool inclComments,
+		std::string* errMsg)
+{
+	cfg::Value cfgValue;
+	cfg::tmlparser::getValueFromString(cfgValue, tml,
+			inclEmptyLines, inclComments, errMsg);
+	return cfgValue;
+}
+
+bool cfg::tmlparser::getValueFromString(cfg::Value& outValue, const std::string& tml,
+		bool inclEmptyLines, bool inclComments,
+		std::string* errMsg)
+{
+	outValue.clear();
+	TmlParser p;
+	p.setStringBuffer("", tml);
+	if (!p.getAsTree(outValue, inclEmptyLines, inclComments)) {
+		// --> error happened
+		if (errMsg) {
+			*errMsg = p.getExtendedErrorMsg();
+		}
+		outValue.clear();
+		return false;
+	}
+	// --> no error
+	if (errMsg) {
+		errMsg->clear();
+	}
+	return true;
 }

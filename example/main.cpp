@@ -13,9 +13,12 @@
 #include <cfg_cppstring_example.h>
 #include <interpreter/interpreter.h>
 #include <interpreter/interpreter_unit_tests.h>
+#include <btml/btml_stream.h>
 
 #include <string>
 #include <iostream>
+
+#define INCLUDE_UNIT_TESTS
 
 namespace
 {
@@ -27,6 +30,8 @@ namespace
 				"commands and args:\n" <<
 				"------------------\n" <<
 				"  help                         ... print this help\n" <<
+				"  load-tml <filename>          ... check if loading the tml file is successful (no print)\n" <<
+				"  load-btml <filename>         ... check if loading the btml file is successful (no print)\n" <<
 				"  print <filename>             ... print the tml file\n" <<
 				"  print-values <filename>      ... print the tml file without empty lines and comments\n" <<
 				"  print-tml <filename>         ... print the tml file in tml-format\n" <<
@@ -46,12 +51,79 @@ namespace
 				"  printtml2json <filename>     ... print the tml file as json\n" <<
 				"  printjson2json <filename>    ... print the json file as json\n" <<
 				"  printtml2cpp <filename>      ... print the tml file as cpp\n" <<
+				"  tml2btml all|shrink|strip|strip-shrink <in-tml> <out-btml> ... convert a tml file to a btml file\n" <<
+				"  btml2tml all <in-btml> <out-tml> ... convert a btml file to a tml file\n" <<
+				//"  btml2tml all|strip <in-btml> <out-tml> ... convert a btml file to a tml file\n" <<
 				"  printcppexample              ... print the cpp example\n" <<
 				"  interpreter-tests            ... some unit-tests for interpreter\n" <<
 				"  interpret <filename>         ... evaluate expressions\n" <<
-				"  all-features <in-name> [<out-name>]     ... includes, templates, translations, profiles, variables, expressions\n" <<
+				"  all-features <in-file> [<out-file>]     ... includes, templates, translations, profiles, variables, expressions\n" <<
 				"  validate <schema-filename> <filename>   ... validate\n" <<
+#ifdef INCLUDE_UNIT_TESTS
+				"  unit-tests                   ... unit-tests\n" <<
+#endif
 				std::endl;
+	}
+
+	int onlyLoadTml(const char* filename, bool inclEmptyLines, bool inclComments)
+	{
+		cfg::TmlParser p(filename);
+		cfg::NameValuePair cvp;
+		if (!p.getAsTree(cvp, inclEmptyLines, inclComments)) {
+			std::cerr << "parse " << filename << " failed" << std::endl;
+			std::cerr << "error: " << p.getExtendedErrorMsg() << std::endl;
+			return 1;
+		}
+		return 0;
+	}
+
+	int onlyLoadBtml(const char* filename)
+	{
+		std::ifstream ifs(filename, std::ios::in | std::ios::binary);
+		if (!ifs.is_open() || ifs.fail()) {
+			std::cout << "Can't open " << filename << std::endl;
+			return 1;
+		}
+		ifs.seekg(0, std::ios::end);
+		std::size_t size = ifs.tellg();
+		ifs.seekg(0, std::ios::beg);
+		std::vector<uint8_t> buf;
+		buf.resize(size);
+		ifs.read(reinterpret_cast<char*>(buf.data()), size);
+		if (ifs.fail()) {
+			std::cout << "Can't read full file content of " << filename << std::endl;
+			return 1;
+		}
+		cfg::Value cfgValue;
+		std::string errMsg;
+		bool headerExist = false;
+		bool stringTableExist = false;
+		unsigned int stringTableEntryCount = false;
+		unsigned int stringTableSize = false;
+
+		unsigned int bytes = cfg::btmlstream::streamToValueWithOptionalHeader(
+				buf.data(), static_cast<unsigned int>(buf.size()), cfgValue,
+				&errMsg, headerExist, stringTableExist, stringTableEntryCount,
+				stringTableSize);
+
+		if (bytes != buf.size()) {
+			std::cerr << "Convert btml " << filename << " to cfg::Value failed. (" <<
+					bytes << " != " << buf.size() << "), err: " <<
+					errMsg << std::endl;
+			return 1;
+		}
+		if (!errMsg.empty()) {
+			std::cout << "err msg: " << errMsg << std::endl;
+		}
+		std::cout << "header: " << (headerExist ? "yes" : "no") << std::endl;
+		std::cout << "string table: " << (stringTableExist ? "yes" : "no") << std::endl;
+		if (stringTableEntryCount > 0 || stringTableExist) {
+			std::cout << "string table entries: " << stringTableEntryCount << std::endl;
+		}
+		if (stringTableSize > 0 || stringTableExist) {
+			std::cout << "string table size: " << stringTableSize << std::endl;
+		}
+		return 0;
 	}
 
 	int printTml(const char* filename, bool inclEmptyLines, bool inclComments)
@@ -386,6 +458,93 @@ namespace
 		return 0;
 	}
 
+	int convertTmlToBtml(const char* inTmlFilename, const char* outBtmlFilename,
+			bool inclEmptyAndComment, bool shrinkBtml)
+	{
+		cfg::TmlParser p(inTmlFilename);
+		cfg::NameValuePair cvp;
+		if (!p.getAsTree(cvp, inclEmptyAndComment, inclEmptyAndComment)) {
+			std::cerr << "parse " << inTmlFilename << " failed" << std::endl;
+			std::cerr << "error: " << p.getExtendedErrorMsg() << std::endl;
+			return 1;
+		}
+		std::vector<uint8_t> btml;
+		unsigned int btmlLen = cfg::btmlstream::valueToStreamWithHeader(
+				cvp.mValue, btml, shrinkBtml);
+		if (btmlLen != btml.size()) {
+			std::cerr << "convert " << inTmlFilename << " to btml failed (" <<
+					btmlLen << " != " << btml.size() << ")" << std::endl;
+			return 1;
+		}
+		std::ofstream fout(outBtmlFilename);
+		fout.write(reinterpret_cast<const char*>(btml.data()), btml.size());
+		if (fout.fail()) {
+			std::cerr << "Create/write " << outBtmlFilename << " failed" << std::endl;
+			return 1;
+		}
+		return 0;
+	}
+
+	int convertBtml2Tml(const char* inBtmlFilename, const char* outTmlFilename)
+	{
+		std::ifstream ifs(inBtmlFilename, std::ios::in | std::ios::binary);
+		if (!ifs.is_open() || ifs.fail()) {
+			std::cout << "Can't open " << inBtmlFilename << std::endl;
+			return 1;
+		}
+		ifs.seekg(0, std::ios::end);
+		std::size_t size = ifs.tellg();
+		ifs.seekg(0, std::ios::beg);
+		std::vector<uint8_t> buf;
+		buf.resize(size);
+		ifs.read(reinterpret_cast<char*>(buf.data()), size);
+		if (ifs.fail()) {
+			std::cout << "Can't read full file content of " << inBtmlFilename << std::endl;
+			return 1;
+		}
+		cfg::Value cfgValue;
+		std::string errMsg;
+		bool headerExist = false;
+		bool stringTableExist = false;
+		unsigned int stringTableEntryCount = false;
+		unsigned int stringTableSize = false;
+
+		unsigned int bytes = cfg::btmlstream::streamToValueWithOptionalHeader(
+				buf.data(), static_cast<unsigned int>(buf.size()), cfgValue,
+				&errMsg, headerExist, stringTableExist, stringTableEntryCount,
+				stringTableSize);
+
+		if (bytes != buf.size()) {
+			std::cerr << "Convert btml " << inBtmlFilename << " to cfg::Value failed. (" <<
+					bytes << " != " << buf.size() << "), err: " <<
+					errMsg << std::endl;
+			return 1;
+		}
+		if (!errMsg.empty()) {
+			std::cout << "err msg: " << errMsg << std::endl;
+		}
+		std::cout << "header: " << (headerExist ? "yes" : "no") << std::endl;
+		std::cout << "string table: " << (stringTableExist ? "yes" : "no") << std::endl;
+		if (stringTableEntryCount > 0 || stringTableExist) {
+			std::cout << "string table entries: " << stringTableEntryCount << std::endl;
+		}
+		if (stringTableSize > 0 || stringTableExist) {
+			std::cout << "string table size: " << stringTableSize << std::endl;
+		}
+		std::ofstream ofs(outTmlFilename);
+		if (!ofs.is_open()) {
+			std::cout << "Can't open/create " << outTmlFilename << std::endl;
+			return 1;
+		}
+		cfg::tmlstring::valueToStream(0, cfgValue, ofs);
+		if (ofs.fail()) {
+			std::cout << "Write to " << outTmlFilename << " failed." << std::endl;
+			return 1;
+		}
+		ofs.close();
+		return 0;
+	}
+
 	int interpret(const char* filename)
 	{
 		cfg::TmlParser p(filename);
@@ -575,6 +734,10 @@ namespace
 	}
 }
 
+#ifdef INCLUDE_UNIT_TESTS
+static int unitTests();
+#endif
+
 int main(int argc, char* argv[])
 {
 	if (argc < 2) {
@@ -590,6 +753,22 @@ int main(int argc, char* argv[])
 		}
 		printHelp(argv[0]);
 		return 0;
+	}
+	if (command == "load-tml") {
+		if (argc != 3) {
+			std::cerr << "load-tml command need exactly one argument/filename" << std::endl;
+			printHelp(argv[0]);
+			return 1;
+		}
+		return onlyLoadTml(argv[2], true, true);
+	}
+	if (command == "load-btml") {
+		if (argc != 3) {
+			std::cerr << "load-btml command need exactly one argument/filename" << std::endl;
+			printHelp(argv[0]);
+			return 1;
+		}
+		return onlyLoadBtml(argv[2]);
 	}
 	if (command == "print") {
 		if (argc != 3) {
@@ -714,6 +893,61 @@ int main(int argc, char* argv[])
 		}
 		return printTmlToCpp(argv[2], true, true);
 	}
+	if (command == "tml2btml") {
+		if (argc != 5) {
+			std::cerr << "tml2btml command need exactly 3 arguments" << std::endl;
+			printHelp(argv[0]);
+			return 1;
+		}
+		bool includeEmptyAndComment = true;
+		bool shrinkBtml = false;
+		std::string mode = argv[2];
+		if (mode == "all") {
+			// already the correct values
+		}
+		else if (mode == "shrink") {
+			shrinkBtml = true;
+		}
+		else if (mode == "strip") {
+			includeEmptyAndComment = false;
+		}
+		else if (mode == "strip-shrink") {
+			includeEmptyAndComment = false;
+			shrinkBtml = true;
+		}
+		else {
+			std::cerr << "tml2btml: mode '" << mode << "' is not supported for tml2btml" << std::endl;
+			printHelp(argv[0]);
+			return 1;
+		}
+		const char* inTmlFilename = argv[3];
+		const char* outBtmlFilename = argv[4];
+		return convertTmlToBtml(inTmlFilename, outBtmlFilename,
+				includeEmptyAndComment, shrinkBtml);
+	}
+	if (command == "btml2tml") {
+		if (argc != 5) {
+			std::cerr << "btml2tml command need exactly 3 arguments" << std::endl;
+			printHelp(argv[0]);
+			return 1;
+		}
+		//bool includeEmptyAndComment = true;
+		std::string mode = argv[2];
+		if (mode == "all") {
+			// already the correct values
+		}
+		//else if (mode == "strip") {
+		//	includeEmptyAndComment = false;
+		//}
+		else {
+			std::cerr << "btml2tml: mode '" << mode << "' is not supported for tml2btml" << std::endl;
+			printHelp(argv[0]);
+			return 1;
+		}
+		const char* inBtmlFilename = argv[3];
+		const char* outTmlFilename = argv[4];
+		return convertBtml2Tml(inBtmlFilename, outTmlFilename);
+	}
 	if (command == "printcppexample") {
 		std::string s = cfg::cppstring::valueToString(0, example, false);
 		std::cout << s << std::endl;
@@ -747,7 +981,99 @@ int main(int argc, char* argv[])
 		}
 		return validate(argv[2], argv[3]);
 	}
+	if (command == "unit-tests") {
+		return unitTests();
+	}
 	std::cerr << "command '" << command << "' is not supported" << std::endl;
 	printHelp(argv[0]);
 	return 1;
 }
+
+#ifdef INCLUDE_UNIT_TESTS
+
+static bool testBtmlWithTml(const std::string& tml)
+{
+	cfg::Value val;
+	std::string errMsg;
+	if (!cfg::tmlparser::getValueFromString(val, tml, true, true, &errMsg)) {
+		std::cout << "'" << tml << "' FAIL: Can't get cfg::Value. err: " << errMsg << std::endl;
+		return false;
+	}
+	std::vector<uint8_t> btml;
+	//unsigned int btmlLen = cfg::btmlstream::valueToStream(val, btml);
+	unsigned int btmlLen = cfg::btmlstream::valueToStreamWithHeader(val, btml, false);
+	if (!btmlLen) {
+		std::cout << "'" << tml << "' FAIL: Can't create btml." << std::endl;
+		return false;
+	}
+	if (btmlLen != btml.size()) {
+		std::cout << "'" << tml << "' FAIL: btml has wrong size. (" <<
+				btmlLen << " != " << btml.size() << ")" << std::endl;
+		return false;
+	}
+	val.clear();
+	errMsg.clear();
+	bool stringTableExist = false;
+	unsigned int stringTableEntryCount = 0;
+	unsigned int stringTableSize = 0;
+	unsigned int btmlRv = cfg::btmlstream::streamToValueWithHeader(btml.data(),
+			static_cast<unsigned int>(btml.size()), val, &errMsg,
+			stringTableExist, stringTableEntryCount, stringTableSize);
+	if (!btmlRv) {
+		std::cout << "'" << tml << "' FAIL: Can't convert back from btml to tml. err: " <<
+				errMsg << std::endl;
+		return false;
+	}
+	if (btmlRv != btml.size()) {
+		std::cout << "'" << tml << "' FAIL: Not all bytes are used from btml to tml. (" <<
+				btmlRv << " != " << btml.size() << "), err: " << errMsg << std::endl;
+		//std::cout << "'" << cfg::cfgstring::valueToString(0, val) << "'" << std::endl;
+		return false;
+	}
+	std::string tmlResult = cfg::tmlstring::valueToString(0, val);
+	if ((tml.empty() || tml.back() != '\n') && !tmlResult.empty() && tmlResult.back() == '\n') {
+		tmlResult.pop_back();
+	}
+	if (tml != tmlResult) {
+		std::cout << "'" << tml << "' FAIL: != '" << tmlResult << "'" << std::endl;
+		return false;
+	}
+	std::cout << "'" << tml << "' OK" << std::endl;
+	return true;
+}
+
+// return 0 for success, 1 for fail
+static int testBtml()
+{
+	bool success = true;
+	std::cout << "*** test btml ***" << std::endl;
+	success = testBtmlWithTml("") && success;
+	success = testBtmlWithTml("# comment") && success;
+	success = testBtmlWithTml("null") && success;
+	success = testBtmlWithTml("true") && success;
+	success = testBtmlWithTml("false") && success;
+	success = testBtmlWithTml("0.123") && success;
+	success = testBtmlWithTml("7") && success;
+	success = testBtmlWithTml("text") && success;
+	success = testBtmlWithTml("0 1 2 3 4 5") && success;
+	success = testBtmlWithTml("object\n\ta = 1\n\tb = 2") && success;
+	success = testBtmlWithTml("a = b") && success;
+	success = testBtmlWithTml("null = true") && success;
+	success = testBtmlWithTml("true = null") && success;
+	success = testBtmlWithTml("false = 0.123") && success;
+	success = testBtmlWithTml("7 = text") && success;
+	success = testBtmlWithTml("text = 0 1 2 3 4 5") && success;
+	success = testBtmlWithTml("0.1 1.2 3.4 = a b c d e f") && success;
+	success = testBtmlWithTml("object\n\ta = 1\n\tb = 2") && success;
+	success = testBtmlWithTml("object\n\ta = 1\n\t# a comment\n\tsubobj\n\t\taa = a\n\t\tbb = b\n\tb = 2") && success;
+	// return 0 for success, 1 for fail
+	return success ? 0 : 1;
+}
+
+static int unitTests()
+{
+	int fail = 0;
+	fail = testBtml() || fail;
+	return fail;
+}
+#endif

@@ -23,12 +23,12 @@ int cfg::interpreter::interpretAndReplaceExprValue(cfg::Value& exprResultValue,
 		}
 		// --> i > nextStartIndex --> i can only be >= 1
 		const cfg::Value& val = exprResultValue.mArray[i];
-		if (!val.isText() || val.mText != "(" ||
+		if (!val.isText() || val.mText.length() != 1 || val.mText[0] != '(' ||
 				(!allowInterpretationWithQuotes && val.mParseTextWithQuotes)) {
 			continue;
 		}
 		const cfg::Value& prev = exprResultValue.mArray[i - 1];
-		if (!prev.isText()) {
+		if (!prev.isText() || prev.mText.length() < 2 || prev.mText[0] != '_') {
 			continue;
 		}
 		if (prev.mText != "_i" && prev.mText != "_ii" &&

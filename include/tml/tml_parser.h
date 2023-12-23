@@ -57,6 +57,20 @@ namespace cfg
 		char mIndentChar;
 		unsigned int mIndentCharCount;
 	};
+
+	namespace tmlparser
+	{
+		// helper functions to convert a tml string to a cfg::Value.
+		CFG_API
+		Value getValueFromString(const std::string& tml,
+				bool inclEmptyLines = false, bool inclComments = false,
+				std::string* errMsg = nullptr);
+
+		CFG_API
+		bool getValueFromString(cfg::Value& outValue, const std::string& tml,
+				bool inclEmptyLines = false, bool inclComments = false,
+				std::string* errMsg = nullptr);
+	}
 }
 
 #endif
