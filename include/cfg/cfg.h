@@ -140,8 +140,15 @@ namespace cfg
 		void setFloatingPoint(float value);
 		void setInteger(int value, unsigned int parseBase = 10);
 		void setText(const std::string& text, bool parseTextWithQuotes = false);
-		//void setText(const char* textBegin, const char* textEndNullTermination, bool parseTextWithQuotes = false);
+		// set text from textBegin (incl.) to textEndExclusive (excl.).
+		// This version has the advantage that at the position textEndExclusive
+		// can be any character. Can be but need not to be a null termination.
+		void setTextEx(const char* textBegin, const char* textEndExclusive, bool parseTextWithQuotes = false);
 		void setComment(const std::string& text);
+		// set text from textBegin (incl.) to textEndExclusive (excl.).
+		// This version has the advantage that at the position textEndExclusive
+		// can be any character. Can be but need not to be a null termination.
+		void setCommentEx(const char* textBegin, const char* textEndExclusive);
 		void setArray();
 		void setObject();
 		bool equalText(const std::string& text) const;

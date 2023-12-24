@@ -327,24 +327,28 @@ void cfg::Value::setText(const std::string& text, bool parseTextWithQuotes)
 	mText = text;
 }
 
-#if 0
-void cfg::Value::setText(const char* textBegin,
-		const char* textEndNullTermination, bool parseTextWithQuotes)
+void cfg::Value::setTextEx(const char* textBegin,
+		const char* textEndExclusive, bool parseTextWithQuotes)
 {
 	clear();
 	mType = TYPE_TEXT;
 	mParseTextWithQuotes = parseTextWithQuotes;
-	//mText = std::string(textBegin, textEndNullTermination);
-	mText.reserve(textEndNullTermination - textBegin + 1);
-	mText = textBegin;
+	mText.assign(textBegin, textEndExclusive);
 }
-#endif
 
 void cfg::Value::setComment(const std::string& text)
 {
 	clear();
 	mType = TYPE_COMMENT;
 	mText = text;
+}
+
+void cfg::Value::setCommentEx(const char* textBegin,
+		const char* textEndExclusive)
+{
+	clear();
+	mType = TYPE_COMMENT;
+	mText.assign(textBegin, textEndExclusive);
 }
 
 void cfg::Value::setArray()
