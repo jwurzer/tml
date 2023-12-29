@@ -149,7 +149,7 @@ namespace cfg
 						std::cout << "Warning: Can't add all duplicated strings to string lookup table" << std::endl;
 						break;
 					}
-					std::cout << it->first << ": " << it->second << std::endl;
+					//std::cout << it->first << ": " << it->second << std::endl;
 					++stringCountForTable;
 					unsigned int length = static_cast<unsigned int>(it->first.length()) + 1; // +1 for null termination
 					if (length < 255) {
@@ -256,7 +256,7 @@ namespace cfg
 			if (!n) {
 				return 0;
 			}
-			Value::EValueType valueType = static_cast<Value::EValueType>(s[0]);
+			Value::EValueType valueType = static_cast<Value::EValueType>(s[0] & 0x0f);
 			switch (valueType) {
 				case Value::TYPE_NONE:
 					cfgValue.clear();
@@ -313,7 +313,8 @@ namespace cfg
 							return 0;
 						}
 						if (valueType == Value::TYPE_TEXT) {
-							cfgValue.setText(str);
+							bool parseTextWithQuotes = ((s[0] & 0x10) != 0);
+							cfgValue.setText(str, parseTextWithQuotes);
 						}
 						else {
 							cfgValue.setComment(str);
@@ -339,7 +340,8 @@ namespace cfg
 							return 0;
 						}
 						if (valueType == Value::TYPE_TEXT) {
-							cfgValue.setText(str);
+							bool parseTextWithQuotes = ((s[0] & 0x10) != 0);
+							cfgValue.setText(str, parseTextWithQuotes);
 						}
 						else {
 							cfgValue.setComment(str);
@@ -445,7 +447,13 @@ namespace cfg
 				case Value::TYPE_TEXT:
 				case Value::TYPE_COMMENT: {
 					unsigned int bytes = 1;
-					s.push_back(uint8_t(cfgValue.mType));
+					uint8_t typeByte = uint8_t(cfgValue.mType);
+					if (cfgValue.mType == Value::TYPE_TEXT) {
+						if (cfgValue.mParseTextWithQuotes) {
+							typeByte |= 0x10; // set flag for "parse text with quotes"
+						}
+					}
+					s.push_back(typeByte);
 					if (stringTable) {
 						TStringTableByString::const_iterator it = stringTable->find(cfgValue.mText);
 						if (it != stringTable->cend()) {
