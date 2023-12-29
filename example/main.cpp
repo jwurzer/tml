@@ -17,6 +17,7 @@
 
 #include <string>
 #include <iostream>
+#include <chrono>
 
 #define INCLUDE_UNIT_TESTS
 
@@ -67,6 +68,7 @@ namespace
 
 	int onlyLoadTml(const char* filename, bool inclEmptyLines, bool inclComments)
 	{
+		auto start = std::chrono::steady_clock::now();
 		cfg::TmlParser p(filename);
 		cfg::NameValuePair cvp;
 		if (!p.getAsTree(cvp, inclEmptyLines, inclComments)) {
@@ -74,11 +76,14 @@ namespace
 			std::cerr << "error: " << p.getExtendedErrorMsg() << std::endl;
 			return 1;
 		}
+		auto endParse = std::chrono::steady_clock::now();
+		std::cout << "Total: " << std::chrono::duration_cast<std::chrono::milliseconds>(endParse - start).count() << "ms" << std::endl;
 		return 0;
 	}
 
 	int onlyLoadBtml(const char* filename)
 	{
+		auto start = std::chrono::steady_clock::now();
 		std::ifstream ifs(filename, std::ios::in | std::ios::binary);
 		if (!ifs.is_open() || ifs.fail()) {
 			std::cout << "Can't open " << filename << std::endl;
@@ -94,6 +99,7 @@ namespace
 			std::cout << "Can't read full file content of " << filename << std::endl;
 			return 1;
 		}
+		auto endFile = std::chrono::steady_clock::now();
 		cfg::Value cfgValue;
 		std::string errMsg;
 		bool headerExist = false;
@@ -105,6 +111,7 @@ namespace
 				buf.data(), static_cast<unsigned int>(buf.size()), cfgValue,
 				&errMsg, headerExist, stringTableExist, stringTableEntryCount,
 				stringTableSize);
+		auto endConvert = std::chrono::steady_clock::now();
 
 		if (bytes != buf.size()) {
 			std::cerr << "Convert btml " << filename << " to cfg::Value failed. (" <<
@@ -112,6 +119,9 @@ namespace
 					errMsg << std::endl;
 			return 1;
 		}
+		std::cout << "File loading: " << std::chrono::duration_cast<std::chrono::milliseconds>(endFile - start).count() << "ms" << std::endl;
+		std::cout << "Convert from btml to cfg::Value: " << std::chrono::duration_cast<std::chrono::milliseconds>(endConvert - endFile).count() << "ms" << std::endl;
+		std::cout << "Total: " << std::chrono::duration_cast<std::chrono::milliseconds>(endConvert - start).count() << "ms" << std::endl;
 		if (!errMsg.empty()) {
 			std::cout << "err msg: " << errMsg << std::endl;
 		}
