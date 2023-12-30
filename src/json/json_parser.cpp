@@ -256,6 +256,12 @@ bool cfg::JsonParser::getAsTree(Value &root)
 	return getAsTree(root, mFilename, mLineNumber, mErrorMsg);
 }
 
+bool cfg::JsonParser::getAsTree(Value& root,
+		bool /*inclEmptyLines*/, bool /*inclComments*/)
+{
+	return getAsTree(root, mFilename, mLineNumber, mErrorMsg);
+}
+
 bool cfg::JsonParser::getAsTree(Value &root, const std::string& filename,
 		unsigned int& outLineNumber, std::string& outErrorMsg)
 {

@@ -1,4 +1,4 @@
-#include <tml/tml_file_loader.h>
+#include <cfg/parser_file_loader.h>
 #include <iostream>
 
 namespace cfg
@@ -76,13 +76,18 @@ namespace cfg
 	}
 }
 
-void cfg::TmlFileLoader::reset()
+cfg::ParserFileLoader::ParserFileLoader(std::unique_ptr<ValueParser> parser)
+	:mParser(std::move(parser))
 {
-	mParser.reset();
+}
+
+void cfg::ParserFileLoader::reset()
+{
+	mParser->reset();
 	mPathStack.clear();
 }
 
-std::string cfg::TmlFileLoader::getFullFilename(const std::string& includeFilename) const
+std::string cfg::ParserFileLoader::getFullFilename(const std::string& includeFilename) const
 {
 	std::string incFilename = includeFilename;
 	std::string curDir = getCurrentDir();
@@ -105,7 +110,7 @@ std::string cfg::TmlFileLoader::getFullFilename(const std::string& includeFilena
 	return curDir + incFilename;
 }
 
-bool cfg::TmlFileLoader::loadAndPush(Value& outValue, std::string& outFullFilename,
+bool cfg::ParserFileLoader::loadAndPush(Value& outValue, std::string& outFullFilename,
 		const std::string& includeFilename, bool inclEmptyLines,
 		bool inclComments, std::string& outErrorMsg)
 {
@@ -136,16 +141,16 @@ bool cfg::TmlFileLoader::loadAndPush(Value& outValue, std::string& outFullFilena
 		}
 	}
 	if (loadWithParser) {
-		mParser.setFilename(outFullFilename);
-		if (!mParser.getAsTree(outValue, inclEmptyLines, inclComments)) {
-			outErrorMsg = mParser.getExtendedErrorMsg();
+		mParser->setFilename(outFullFilename);
+		if (!mParser->getAsTree(outValue, inclEmptyLines, inclComments)) {
+			outErrorMsg = mParser->getExtendedErrorMsg();
 			// must happend after reading err msg with getExtendedErrorMsg()
 			// otherwise the error message is empty
-			mParser.reset();
+			mParser->reset();
 			outValue.clear();
 			return false;
 		}
-		mParser.reset();
+		mParser->reset();
 		if (mBuffering) {
 			// buffering is active --> filenameKey has already correct key (not empty)!
 			mBufferedFiles[filenameKey] = outValue; // create a copy (no move etc.)
@@ -155,7 +160,7 @@ bool cfg::TmlFileLoader::loadAndPush(Value& outValue, std::string& outFullFilena
 	return true;
 }
 
-bool cfg::TmlFileLoader::pop()
+bool cfg::ParserFileLoader::pop()
 {
 	if (mPathStack.empty()) {
 		return false;
@@ -164,13 +169,13 @@ bool cfg::TmlFileLoader::pop()
 	return true;
 }
 
-void cfg::TmlFileLoader::push(const std::string& includeFilename)
+void cfg::ParserFileLoader::push(const std::string& includeFilename)
 {
 	std::string fullFilename = getFullFilename(includeFilename);
 	mPathStack.push_back(getDirname(fullFilename));
 }
 
-std::string cfg::TmlFileLoader::getCurrentDir() const
+std::string cfg::ParserFileLoader::getCurrentDir() const
 {
 	if (mPathStack.empty()) {
 		return "";

@@ -6,8 +6,8 @@
 #include <cfg/cfg_include.h>
 #include <cfg/cfg_cppstring.h>
 #include <cfg/cfg_schema.h>
+#include <cfg/parser_file_loader.h>
 #include <tml/tml_string.h>
-#include <tml/tml_file_loader.h>
 #include <json/json_string.h>
 #include <json/json_parser.h>
 #include <cfg_cppstring_example.h>
@@ -339,7 +339,7 @@ namespace
 	int includeAndPrint(const char* filename, bool includeOnce, bool inclEmptyLines,
 			bool inclComments, bool withFileBuffering, bool forceDeepByStoredDeepValue)
 	{
-		cfg::TmlFileLoader loader;
+		cfg::ParserFileLoader loader(std::unique_ptr<cfg::TmlParser>(new cfg::TmlParser()));
 		cfg::Value value;
 		std::string outErrorMsg;
 		cfg::inc::TFileMap includedFiles;
@@ -516,8 +516,8 @@ namespace
 		std::string errMsg;
 		bool headerExist = false;
 		bool stringTableExist = false;
-		unsigned int stringTableEntryCount = false;
-		unsigned int stringTableSize = false;
+		unsigned int stringTableEntryCount = 0;
+		unsigned int stringTableSize = 0;
 
 		unsigned int bytes = cfg::btmlstream::streamToValueWithOptionalHeader(
 				buf.data(), static_cast<unsigned int>(buf.size()), cfgValue,
@@ -597,7 +597,7 @@ namespace
 			std::cout << s << std::endl;
 		}
 
-		cfg::TmlFileLoader loader;
+		cfg::ParserFileLoader loader(std::unique_ptr<cfg::TmlParser>(new cfg::TmlParser()));
 		cfg::Value value;
 		std::string outErrorMsg;
 		cfg::inc::TFileMap includedFiles;

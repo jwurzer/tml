@@ -6,9 +6,15 @@
 
 namespace cfg
 {
+	/**
+	 * Load a cfg::Value (and its children) from a file.
+	 * loadAndPush() and pop() is useful to support includes.
+	 * See cfg_include.h for FileLoader use cases.
+	 */
 	class CFG_API FileLoader
 	{
 	public:
+		virtual ~FileLoader() = default;
 		/**
 		 * Reset all entries. FileLoader is like after new creation.
 		 */

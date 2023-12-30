@@ -2,6 +2,7 @@
 #define CFG_TML_PARSER_H
 
 #include <cfg/export.h>
+#include <cfg/value_parser.h>
 
 #include <fstream>
 #include <sstream>
@@ -16,14 +17,14 @@ namespace cfg
 	 * TML - Tiny Markup Language
 	 * See more infos at the end of this file.
 	 */
-	class CFG_API TmlParser
+	class CFG_API TmlParser: public ValueParser
 	{
 	public:
 		TmlParser();
 		TmlParser(const std::string& filename);
-		~TmlParser();
-		void reset();
-		bool setFilename(const std::string& filename);
+		virtual ~TmlParser();
+		virtual void reset() override;
+		virtual bool setFilename(const std::string& filename) override;
 		bool setStringBuffer(const std::string& pseudoFilename,
 				const std::string& strBuffer);
 		bool begin();
@@ -35,12 +36,12 @@ namespace cfg
 				int lineNumber);
 		bool getAsTree(NameValuePair &root,
 				bool inclEmptyLines = false, bool inclComments = false);
-		bool getAsTree(Value &root,
-				bool inclEmptyLines = false, bool inclComments = false);
+		virtual bool getAsTree(Value &root,
+				bool inclEmptyLines = false, bool inclComments = false) override;
 		const std::string& getErrorMsg() const { return mErrorMsg; }
 		unsigned int getLineNumber() const { return mLineNumber; }
 		// return filename with linenumber and error message
-		std::string getExtendedErrorMsg() const;
+		virtual std::string getExtendedErrorMsg() const override;
 		int getErrorCode() const { return mErrorCode; }
 	private:
 		bool mReadFromFile;

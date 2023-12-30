@@ -2,6 +2,7 @@
 #define CFG_JSON_PARSER_H
 
 #include <cfg/export.h>
+#include <cfg/value_parser.h>
 
 #include <string>
 
@@ -28,22 +29,25 @@ namespace cfg
 	 * https://www.ecma-international.org/publications-and-standards/standards/ecma-404/
 	 * https://www.ecma-international.org/wp-content/uploads/ECMA-404_2nd_edition_december_2017.pdf
 	 */
-	class CFG_API JsonParser
+	class CFG_API JsonParser: public ValueParser
 	{
 	public:
 		JsonParser();
 		JsonParser(const std::string& filename);
-		~JsonParser();
-		void reset();
-		bool setFilename(const std::string& filename);
+		virtual ~JsonParser();
+		virtual void reset() override;
+		virtual bool setFilename(const std::string& filename) override;
 		bool getAsTree(NameValuePair &root);
 		bool getAsTree(Value &root);
+		// inclEmptyLines and inclComments parameter are ignored!
+		virtual bool getAsTree(Value& root,
+				bool inclEmptyLines, bool inclComments) override;
 		static bool getAsTree(Value &root, const std::string& filename,
 				unsigned int& outLineNumber, std::string& outErrorMsg);
 		const std::string& getErrorMsg() const { return mErrorMsg; }
 		unsigned int getLineNumber() const { return mLineNumber; }
 		// return filename with linenumber and error message
-		std::string getExtendedErrorMsg() const;
+		virtual std::string getExtendedErrorMsg() const override;
 	private:
 		std::string mFilename;
 		std::string mErrorMsg;

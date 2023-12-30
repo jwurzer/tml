@@ -1,16 +1,22 @@
-#ifndef CFG_TML_FILE_LOADER_H
-#define CFG_TML_FILE_LOADER_H
+#ifndef CFG_PARSER_FILE_LOADER_H
+#define CFG_PARSER_FILE_LOADER_H
 
 #include <cfg/file_loader.h>
+#include <cfg/value_parser.h>
 #include <tml/tml_parser.h>
 #include <vector>
 #include <map>
 
 namespace cfg
 {
-	class CFG_API TmlFileLoader: public FileLoader
+	/**
+	 * Implementation of a FileLoader using internal a ValueParser to parse the file.
+	 */
+	class CFG_API ParserFileLoader: public FileLoader
 	{
 	public:
+		ParserFileLoader(std::unique_ptr<ValueParser> parser);
+		virtual ~ParserFileLoader() = default;
 		virtual void reset() override;
 		virtual std::string getFullFilename(const std::string& includeFilename) const override;
 		virtual bool loadAndPush(Value& outValue, std::string& outFullFilename,
@@ -26,7 +32,7 @@ namespace cfg
 	private:
 		typedef std::map<std::string, Value> TFileBufferMap;
 
-		TmlParser mParser;
+		std::unique_ptr<ValueParser> mParser;
 		std::vector<std::string> mPathStack;
 
 		bool mBuffering = false;
