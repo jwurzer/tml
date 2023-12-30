@@ -82,7 +82,8 @@ namespace cfg
 					mustBeEscaped = true;
 				}
 			}
-			if (!mustBeEscaped && text != "true" && text != "false" && text != "null") {
+			if (!mustBeEscaped && text != "true" && text != "false"
+					&& text != "null" && text != "[]" && text != "{}") {
 				return text;
 			}
 			std::stringstream ss;
