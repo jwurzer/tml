@@ -52,7 +52,7 @@ namespace
 				"  printtml2json <filename>     ... print the tml file as json\n" <<
 				"  printjson2json <filename>    ... print the json file as json\n" <<
 				"  printtml2cpp <filename>      ... print the tml file as cpp\n" <<
-				"  tml2btml all|shrink|strip|strip-shrink <in-tml> <out-btml> ... convert a tml file to a btml file\n" <<
+				"  tml2btml all|shrink|strip|strip-shrink|afss <in-tml> <out-btml> ... convert a tml file to a btml file\n" <<
 				"  btml2tml all <in-btml> <out-tml> ... convert a btml file to a tml file\n" <<
 				//"  btml2tml all|strip <in-btml> <out-tml> ... convert a btml file to a tml file\n" <<
 				"  printcppexample              ... print the cpp example\n" <<
@@ -468,15 +468,27 @@ namespace
 		return 0;
 	}
 
+	int allFeaturesToCfgValue(const char* filename, bool printAfterEachStep,
+			cfg::Value& value, bool inclEmptyLines, bool inclComments);
+
 	int convertTmlToBtml(const char* inTmlFilename, const char* outBtmlFilename,
-			bool inclEmptyAndComment, bool shrinkBtml)
+			bool allFeatures, bool inclEmptyAndComment, bool shrinkBtml)
 	{
-		cfg::TmlParser p(inTmlFilename);
 		cfg::NameValuePair cvp;
-		if (!p.getAsTree(cvp, inclEmptyAndComment, inclEmptyAndComment)) {
-			std::cerr << "parse " << inTmlFilename << " failed" << std::endl;
-			std::cerr << "error: " << p.getExtendedErrorMsg() << std::endl;
-			return 1;
+		if (allFeatures) {
+			int rv = allFeaturesToCfgValue(inTmlFilename, false,
+					cvp.mValue, inclEmptyAndComment, inclEmptyAndComment);
+			if (rv) {
+				return rv;
+			}
+		}
+		else {
+			cfg::TmlParser p(inTmlFilename);
+			if (!p.getAsTree(cvp, inclEmptyAndComment, inclEmptyAndComment)) {
+				std::cerr << "parse " << inTmlFilename << " failed" << std::endl;
+				std::cerr << "error: " << p.getExtendedErrorMsg() << std::endl;
+				return 1;
+			}
 		}
 		std::vector<uint8_t> btml;
 		unsigned int btmlLen = cfg::btmlstream::valueToStreamWithHeader(
@@ -581,29 +593,28 @@ namespace
 		return 0;
 	}
 
-	int allFeatures(const char* filename, bool printAfterEachStep, const char* outputFilename)
+	int allFeaturesToCfgValue(const char* filename, bool printAfterEachStep,
+			cfg::Value& value, bool inclEmptyLines, bool inclComments)
 	{
 		if (printAfterEachStep) {
 			cfg::TmlParser p(filename);
 			cfg::NameValuePair cvp;
-			if (!p.getAsTree(cvp, true, true)) {
+			if (!p.getAsTree(cvp, inclEmptyLines, inclComments)) {
 				std::cerr << "parse " << filename << " failed" << std::endl;
 				std::cerr << "error: " << p.getExtendedErrorMsg() << std::endl;
 				return 1;
 			}
-			cfg::Value& value = cvp.mValue;
+			cfg::Value& v = cvp.mValue;
 			std::cout << "==================== original ====================" << std::endl;
-			std::string s = cfg::tmlstring::valueToString(0, value);
+			std::string s = cfg::tmlstring::valueToString(0, v);
 			std::cout << s << std::endl;
 		}
 
 		cfg::ParserFileLoader loader(std::unique_ptr<cfg::TmlParser>(new cfg::TmlParser()));
-		cfg::Value value;
+		value.clear();
 		std::string outErrorMsg;
 		cfg::inc::TFileMap includedFiles;
 		bool includeOnce = true;
-		bool inclEmptyLines = false;
-		bool inclComments = false;
 		bool withFileBuffering = true;
 		if (!cfg::inc::loadAndIncludeFiles(value, includedFiles, filename, loader,
 				"include", includeOnce, inclEmptyLines, inclComments, withFileBuffering,
@@ -702,6 +713,16 @@ namespace
 			std::string s = cfg::tmlstring::valueToString(0, value);
 			std::cout << s << std::endl;
 			std::cout << "=========== EOF ===========" << std::endl;
+		}
+		return 0;
+	}
+
+	int allFeatures(const char* filename, bool printAfterEachStep, const char* outputFilename)
+	{
+		cfg::Value value;
+		int rv = allFeaturesToCfgValue(filename, printAfterEachStep, value, false, false);
+		if (rv) {
+			return rv;
 		}
 		if (outputFilename) {
 			std::ofstream file(outputFilename);
@@ -909,6 +930,7 @@ int main(int argc, char* argv[])
 			printHelp(argv[0]);
 			return 1;
 		}
+		bool allFeatures = false;
 		bool includeEmptyAndComment = true;
 		bool shrinkBtml = false;
 		std::string mode = argv[2];
@@ -925,6 +947,11 @@ int main(int argc, char* argv[])
 			includeEmptyAndComment = false;
 			shrinkBtml = true;
 		}
+		else if (mode == "afss") { // all-features-strip-shrink
+			allFeatures = true;
+			includeEmptyAndComment = false;
+			shrinkBtml = true;
+		}
 		else {
 			std::cerr << "tml2btml: mode '" << mode << "' is not supported for tml2btml" << std::endl;
 			printHelp(argv[0]);
@@ -933,7 +960,7 @@ int main(int argc, char* argv[])
 		const char* inTmlFilename = argv[3];
 		const char* outBtmlFilename = argv[4];
 		return convertTmlToBtml(inTmlFilename, outBtmlFilename,
-				includeEmptyAndComment, shrinkBtml);
+				allFeatures, includeEmptyAndComment, shrinkBtml);
 	}
 	if (command == "btml2tml") {
 		if (argc != 5) {
