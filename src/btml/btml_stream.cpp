@@ -1,7 +1,7 @@
 #include <btml/btml_stream.h>
 #include <cfg/cfg.h>
 #include <map>
-#include <iostream>
+//#include <iostream>
 
 namespace cfg
 {
@@ -146,7 +146,7 @@ namespace cfg
 					it != stringCountMap.cend(); ++it) {
 				if (it->second > 1 && it->first.length() >= 2 && it->first.length() <= 32000) {
 					if (nextOffset > 0xffff) {
-						std::cout << "Warning: Can't add all duplicated strings to string lookup table" << std::endl;
+						//std::cout << "Warning: Can't add all duplicated strings to string lookup table" << std::endl;
 						break;
 					}
 					//std::cout << it->first << ": " << it->second << std::endl;
@@ -178,9 +178,9 @@ namespace cfg
 			uintVal.value = uint16_t(stringCountForTable);
 			s[tableBegin] = uintVal.array[0];
 			s[tableBegin + 1] = uintVal.array[1];
-			std::cout << "different strings: " << stringCountMap.size() <<
-					", diff strings at table " << stringCountForTable <<
-					", added bytes " << (s.size() - tableBegin) << std::endl;
+			//std::cout << "different strings: " << stringCountMap.size() <<
+			//		", diff strings at table " << stringCountForTable <<
+			//		", added bytes " << (s.size() - tableBegin) << std::endl;
 			return true;
 		}
 
@@ -203,7 +203,7 @@ namespace cfg
 			unsigned int strCount = *reinterpret_cast<const uint16_t*>(s);
 			s += 2;
 			n -= 2;
-			std::cout << "Count is " << strCount << std::endl;
+			//std::cout << "Count is " << strCount << std::endl;
 			for (unsigned int i = 0; i < strCount; ++i) {
 				if (n < 3) {
 					if (errMsg) {
