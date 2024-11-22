@@ -209,6 +209,9 @@ namespace cfg
 		bool objectGetInteger(const std::string &attrName, int &attrValue) const;
 		// if not exist it return 0
 		int objectGetInteger(const std::string &attrName) const;
+		bool objectGetFloat(const std::string &attrName, bool allowInteger, float &attrValue) const;
+		// if not exist it return 0
+		float objectGetFloat(const std::string &attrName, bool allowInteger) const;
 		bool objectGetBool(const std::string &attrName, bool &attrValue) const;
 		bool objectGetBool(const std::string &attrName) const;
 

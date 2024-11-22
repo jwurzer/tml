@@ -494,6 +494,32 @@ int cfg::Value::objectGetInteger(const std::string &attrName) const
 	return attrValue;
 }
 
+bool cfg::Value::objectGetFloat(const std::string &attrName, bool allowInteger, float &attrValue) const
+{
+	const Value* value = objectGetValue(attrName);
+	if (!value) {
+		return false;
+	}
+	if (value->mType != Value::TYPE_FLOAT &&
+			(!allowInteger || value->mType != Value::TYPE_INT)
+			) {
+		return false;
+	}
+	// if it is an integer then the floating point member also has the correct value
+	attrValue = value->mFloatingPoint;
+	return true;
+}
+
+// if not exist it return 0
+float cfg::Value::objectGetFloat(const std::string &attrName, bool allowInteger) const
+{
+	float attrValue = 0.0f;
+	if (!objectGetFloat(attrName, allowInteger, attrValue)) {
+		return 0.0f;
+	}
+	return attrValue;
+}
+
 bool cfg::Value::objectGetBool(const std::string &attrName, bool &attrValue) const
 {
 	const Value* value = objectGetValue(attrName);
