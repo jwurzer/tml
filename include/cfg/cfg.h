@@ -209,6 +209,9 @@ namespace cfg
 		bool objectGetInteger(const std::string &attrName, int &attrValue) const;
 		// if not exist it return 0
 		int objectGetInteger(const std::string &attrName) const;
+		bool objectGetFloat(const std::string &attrName, bool allowInteger, float &attrValue) const;
+		// if not exist it return 0
+		float objectGetFloat(const std::string &attrName, bool allowInteger) const;
 		bool objectGetBool(const std::string &attrName, bool &attrValue) const;
 		bool objectGetBool(const std::string &attrName) const;
 
@@ -358,15 +361,17 @@ namespace cfg
 		NameValuePair& operator=(NameValuePair&& other);
 		NameValuePair(const NameValuePair& other) = default;
 		NameValuePair& operator=(const NameValuePair& other) = default;
-		//~NameValuePair(); // default destructor is enougth
+		//~NameValuePair(); // default destructor is enough
 
 		void clear();
 		void setTextBool(const std::string& attrName, bool attrValue);
 		void setTextFloat(const std::string& attrName, float attrValue);
 		void setTextInt(const std::string& attrName, int attrValue);
 		void setTextText(const std::string& attrName, const std::string& attrValue);
-		// value is a empty array
+		// value is an empty array
 		void setTextArray(const std::string& attrName);
+		// value is an empty object
+		void setTextObject(const std::string& attrName) { setObject(attrName); }
 		void setComment(const std::string& text);
 		void setObject();
 		void setObject(const std::string &objectName);

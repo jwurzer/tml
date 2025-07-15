@@ -253,7 +253,7 @@ static bool testsWithLexer()
 		std::cout << "Passed all " << sPassed << " tests." << std::endl;
 	} else {
 		std::cout << "----";
-		std::cout << "Failed " << sFailed << " out of " +
+		std::cout << "Failed " << sFailed << " out of " <<
 				(sFailed + sPassed) << " tests." << std::endl;
 	}
 	return sFailed == 0;
@@ -312,7 +312,7 @@ static bool testsWithCfgLexer()
 		std::cout << "Passed all " << sPassed << " tests." << std::endl;
 	} else {
 		std::cout << "----";
-		std::cout << "Failed " << sFailed << " out of " +
+		std::cout << "Failed " << sFailed << " out of " <<
 				(sFailed + sPassed) << " tests." << std::endl;
 	}
 	return sFailed == 0;
