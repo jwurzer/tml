@@ -36,6 +36,7 @@ namespace
 				"  print <filename>             ... print the tml file\n" <<
 				"  print-values <filename>      ... print the tml file without empty lines and comments\n" <<
 				"  print-tml <filename>         ... print the tml file in tml-format\n" <<
+				"  print-tml-lines <filename>   ... same as print-tml (internal uses TmlLines version)\n" <<
 				"  print-tml-values <filename>  ... print the tml file without empty lines and comments in tml-format\n" <<
 				"  print-tml-stdin              ... print the tml from stdin in tml-format\n" <<
 				"  templates <filename>         ... load and print templates from tml file\n" <<
@@ -150,7 +151,8 @@ namespace
 		return 0;
 	}
 
-	int printTmlAsTml(const char* filename, bool inclEmptyLines, bool inclComments)
+	int printTmlAsTml(const char* filename, bool inclEmptyLines, bool inclComments,
+			bool useTmlLines = false)
 	{
 		cfg::TmlParser p(filename);
 		cfg::NameValuePair cvp;
@@ -161,7 +163,15 @@ namespace
 		}
 		//std::string s = cfg::tmlstring::nameValuePairToString(0, cvp);
 		// valueToString() always includes a \n. also for the last line.
-		std::string s = cfg::tmlstring::valueToString(0, cvp.mValue);
+		std::string s;
+		if (useTmlLines) {
+			cfg::TmlLines tmlLines;
+			cfg::tmlstring::valueToTmlLines(0, cvp.mValue, tmlLines);
+			s = cfg::tmlstring::tmlLinesToString(tmlLines);
+		}
+		else {
+			s = cfg::tmlstring::valueToString(0, cvp.mValue);
+		}
 		std::cout << s; // no std::endl here!
 		//std::cout << std::endl; // not necessary. already include a \n.
 		return 0;
@@ -826,6 +836,14 @@ int main(int argc, char* argv[])
 			return 1;
 		}
 		return printTmlAsTml(argv[2], true, true);
+	}
+	if (command == "print-tml-lines") {
+		if (argc != 3) {
+			std::cerr << "print-tml-lines command need exactly one argument/filename" << std::endl;
+			printHelp(argv[0]);
+			return 1;
+		}
+		return printTmlAsTml(argv[2], true, true, true /* use tml lines */);
 	}
 	if (command == "print-tml-values") {
 		if (argc != 3) {
