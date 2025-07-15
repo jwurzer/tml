@@ -160,8 +160,10 @@ namespace
 			return 1;
 		}
 		//std::string s = cfg::tmlstring::nameValuePairToString(0, cvp);
+		// valueToString() always includes a \n. also for the last line.
 		std::string s = cfg::tmlstring::valueToString(0, cvp.mValue);
-		std::cout << s << std::endl;
+		std::cout << s; // no std::endl here!
+		//std::cout << std::endl; // not necessary. already include a \n.
 		return 0;
 	}
 
