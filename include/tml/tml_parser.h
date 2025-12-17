@@ -20,6 +20,13 @@ namespace cfg
 	class CFG_API TmlParser: public ValueParser
 	{
 	public:
+		enum class Source
+		{
+			NONE = 0,
+			FILE,
+			STRING_STREAM,
+			CUSTOM_STREAM,
+		};
 		TmlParser();
 		TmlParser(const std::string& filename);
 		virtual ~TmlParser();
@@ -27,6 +34,10 @@ namespace cfg
 		virtual bool setFilename(const std::string& filename) override;
 		bool setStringBuffer(const std::string& pseudoFilename,
 				const std::string& strBuffer);
+		// If this is used then only the pointer is copied!
+		// --> inStream must live as long as TmlParser object!
+		bool setCustomStream(const std::string& pseudoFilename,
+				std::istream* inStream);
 		bool begin();
 		// return -1 for error, -2 for end of file or deep count for success
 		int getNextTmlEntry(NameValuePair& entry);
@@ -44,7 +55,7 @@ namespace cfg
 		virtual std::string getExtendedErrorMsg() const override;
 		int getErrorCode() const { return mErrorCode; }
 	private:
-		bool mReadFromFile;
+		Source mSource;
 		std::string mFilename;
 		std::string mStrBuffer;
 		std::ifstream mIfs;

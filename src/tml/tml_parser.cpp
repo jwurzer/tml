@@ -154,7 +154,7 @@ namespace cfg
 	}
 }
 cfg::TmlParser::TmlParser()
-		:mReadFromFile(false), mFilename(), mStrBuffer(), mIfs(), mIss(),
+		:mSource(Source::NONE), mFilename(), mStrBuffer(), mIfs(), mIss(),
 		mInStream(&mIss), mLine(), mErrorCode(0), mErrorMsg(),
 		mLineNumber(0),
 		mIndentChar(0),
@@ -195,7 +195,7 @@ bool cfg::TmlParser::setFilename(const std::string& filename)
 {
 	reset();
 
-	mReadFromFile = true;
+	mSource = Source::FILE;
 	mFilename = filename;
 	mStrBuffer.clear();
 	mInStream = &mIfs;
@@ -207,39 +207,65 @@ bool cfg::TmlParser::setStringBuffer(const std::string& pseudoFilename,
 {
 	reset();
 
-	mReadFromFile = false;
+	mSource = Source::STRING_STREAM;
 	mFilename = pseudoFilename;
 	mStrBuffer = strBuffer;
 	mInStream = &mIss;
 	return true;
 }
 
+bool cfg::TmlParser::setCustomStream(const std::string& pseudoFilename,
+		std::istream* inStream)
+{
+	reset();
+
+	mSource = Source::CUSTOM_STREAM;
+	mFilename = pseudoFilename;
+	mInStream = inStream;
+	return true;
+}
+
 bool cfg::TmlParser::begin()
 {
 	mLineNumber = 0;
-	if (!mReadFromFile) {
-		mIss.str(mStrBuffer);
-		return true;
-	}
 
-	// --> read from file
-	if (mIfs.is_open()) {
-		mIfs.clear(); // clear error flags
-		mIfs.seekg(0, mIfs.beg);
-		if (mIfs.fail()) {
-			mErrorMsg = "Can't seek to the beginning.";
+	switch (mSource) {
+		case Source::NONE:
+			mErrorMsg = "Source is NONE.";
 			mErrorCode = -1;
 			return false;
-		}
-		return true;
+		case Source::FILE:
+			// --> read from file
+			if (mIfs.is_open()) {
+				mIfs.clear(); // clear error flags
+				mIfs.seekg(0, std::ifstream::beg);
+				if (mIfs.fail()) {
+					mErrorMsg = "Can't seek to the beginning.";
+					mErrorCode = -1;
+					return false;
+				}
+				return true;
+			}
+			mIfs.open(mFilename.c_str(), std::ifstream::in);
+			if (mIfs.fail()) {
+				mErrorMsg = "Can't open file.";
+				mErrorCode = -2;
+				return false;
+			}
+			return true;
+		case Source::STRING_STREAM:
+			mIss.str(mStrBuffer);
+			return true;
+		case Source::CUSTOM_STREAM:
+			if (!mInStream) {
+				mErrorMsg = "Null pointer. Can't seek to the beginning.";
+				mErrorCode = -1;
+				return false;
+			}
+			mInStream->seekg(0, std::istream::beg);
+			return true;
 	}
-	mIfs.open(mFilename.c_str(), std::ifstream::in);
-	if (mIfs.fail()) {
-		mErrorMsg = "Can't open file.";
-		mErrorCode = -2;
-		return false;
-	}
-	return true;
+	return false;
 }
 
 int cfg::TmlParser::getNextTmlEntry(NameValuePair& entry)
@@ -249,7 +275,7 @@ int cfg::TmlParser::getNextTmlEntry(NameValuePair& entry)
 
 int cfg::TmlParser::getNextTmlEntry(NameValuePair& entry, std::string* outLine, int* outLineNumber)
 {
-	if (mReadFromFile) {
+	if (mSource == Source::FILE) {
 		// --> file is used
 		if (!mIfs.is_open()) {
 			mErrorCode = -3;
@@ -257,7 +283,7 @@ int cfg::TmlParser::getNextTmlEntry(NameValuePair& entry, std::string* outLine, 
 		}
 	}
 	getline(*mInStream, mLine);
-	if (mReadFromFile && mIfs.eof()) {
+	if (mSource == Source::FILE && mIfs.eof()) {
 		mIfs.close();
 		// no error code and no return here because if last line with content
 		// has no line break at the end then eof() is already true, but
