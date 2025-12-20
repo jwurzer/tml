@@ -274,19 +274,29 @@ bool cfg::JsonParser::getAsTree(Value &root, const std::string& filename,
 		outErrorMsg = "Can't open file.";
 		return false;
 	}
+	bool rv = getAsTree(root, filename, ifs, outLineNumber, outErrorMsg);
+	ifs.close();
+	return rv;
+}
+
+bool cfg::JsonParser::getAsTree(Value &root, const std::string& filenameInfo,
+		std::istream& stream, unsigned int& outLineNumber,
+		std::string& outErrorMsg)
+{
+	root.clear();
 
 	std::map<std::size_t /* total byte offset of line start */, unsigned int /* line number */> lines;
 	std::string line;
 	std::vector<char> fullContent;
 	unsigned int lineCount = 0;
 	for (;;) {
-		getline(ifs, line);
-		if (ifs.fail() && !ifs.eof()) {
+		getline(stream, line);
+		if (stream.fail() && !stream.eof()) {
 			outLineNumber = lineCount;
 			outErrorMsg = "Can't read the full content of the file.";
 			return false;
 		}
-		if (ifs.eof() && line.empty()) {
+		if (stream.eof() && line.empty()) {
 			break;
 		}
 		++lineCount;
@@ -294,11 +304,10 @@ bool cfg::JsonParser::getAsTree(Value &root, const std::string& filename,
 		fullContent.insert(fullContent.end(), line.begin(), line.end());
 		fullContent.push_back('\n');
 		//std::cout << "Add line " << lineNumber << " length " << line.size() << std::endl;
-		if (ifs.eof()) {
+		if (stream.eof()) {
 			break;
 		}
 	}
-	ifs.close();
 	fullContent.push_back('\0'); // termination --> char-array is a compatible c-string
 
 	jsmn_parser p;
@@ -340,7 +349,7 @@ bool cfg::JsonParser::getAsTree(Value &root, const std::string& filename,
 		return false;
 	}
 
-	std::shared_ptr<const std::string> filenamePtr = std::make_shared<const std::string>(filename);
+	std::shared_ptr<const std::string> filenamePtr = std::make_shared<const std::string>(filenameInfo);
 	dumpToValue(root, filenamePtr, fullContent.data(), tok.data(), p.toknext, 0);
 	return true;
 }

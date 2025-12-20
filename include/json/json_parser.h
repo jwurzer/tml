@@ -44,6 +44,9 @@ namespace cfg
 				bool inclEmptyLines, bool inclComments) override;
 		static bool getAsTree(Value &root, const std::string& filename,
 				unsigned int& outLineNumber, std::string& outErrorMsg);
+		static bool getAsTree(Value &root, const std::string& filenameInfo,
+				std::istream& stream, unsigned int& outLineNumber,
+				std::string& outErrorMsg);
 		const std::string& getErrorMsg() const { return mErrorMsg; }
 		unsigned int getLineNumber() const { return mLineNumber; }
 		// return filename with linenumber and error message
