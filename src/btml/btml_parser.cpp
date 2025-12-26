@@ -17,7 +17,10 @@ cfg::BtmlParser::~BtmlParser()
 
 void cfg::BtmlParser::reset()
 {
+	mSource = Source::NONE;
 	mFilename.clear();
+	mBuf = nullptr;
+	mBufSize = 0;
 	mData.clear();
 	mDataIsValid = false;
 	mErrorMsg.clear();
@@ -26,8 +29,34 @@ void cfg::BtmlParser::reset()
 bool cfg::BtmlParser::setFilename(const std::string& filename)
 {
 	reset();
+	mSource = Source::FILE;
 	mFilename = filename;
 	return loadDataFromFile();
+}
+
+bool cfg::BtmlParser::setStringBuffer(const std::string& pseudoFilename,
+		const std::string& strBuffer)
+{
+	reset();
+	mSource = Source::STRING_STREAM;
+	mFilename = pseudoFilename;
+	mData.assign(strBuffer.begin(), strBuffer.end());
+	mDataIsValid = true;
+	return true;
+}
+
+bool cfg::BtmlParser::setCustomBuffer(const std::string& pseudoFilename,
+		const uint8_t* buf, unsigned int bufSize)
+{
+	reset();
+	if (!buf) {
+		return false;
+	}
+	mSource = Source::CUSTOM_BUFFER;
+	mBuf = buf;
+	mBufSize = bufSize;
+	mDataIsValid = true;
+	return true;
 }
 
 // inclEmptyLines and inclComments parameter are ignored!
@@ -46,13 +75,17 @@ bool cfg::BtmlParser::getAsTree(Value& root,
 	unsigned int stringTableEntryCount = 0;
 	unsigned int stringTableSize = 0;
 
+	const uint8_t* buf = (mSource == Source::CUSTOM_BUFFER) ?
+			mBuf : mData.data();
+	unsigned int bufSize = (mSource == Source::CUSTOM_BUFFER) ?
+			mBufSize : static_cast<unsigned int>(mData.size());
 	unsigned int bytes = cfg::btmlstream::streamToValueWithOptionalHeader(
-			mData.data(), static_cast<unsigned int>(mData.size()), root,
+			buf, bufSize, root,
 			&mErrorMsg, headerExist, stringTableExist, stringTableEntryCount,
 			stringTableSize);
-	if (bytes != mData.size()) {
+	if (bytes != bufSize) {
 		mErrorMsg += "warning: Convert btml to cfg::Value don't use all bytes. (" +
-				std::to_string(bytes) + " != " + std::to_string(mData.size()) + ")";
+				std::to_string(bytes) + " != " + std::to_string(bufSize) + ")";
 		// only a warning, not an error
 		// --> NO return false here!
 	}
@@ -73,7 +106,7 @@ bool cfg::BtmlParser::loadDataFromFile()
 	mDataIsValid = false;
 	std::ifstream ifs(mFilename, std::ios::in | std::ios::binary);
 	if (!ifs.is_open() || ifs.fail()) {
-		mErrorMsg = "Can't open " + mFilename;
+		mErrorMsg = "Can't open '" + mFilename + "'.";
 		return false;
 	}
 	ifs.seekg(0, std::ios::end);

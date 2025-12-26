@@ -31,25 +31,24 @@ bool cfg::TmlBtmlParser::setFilename(const std::string& filename)
 {
 	reset();
 	mFilename = filename;
-	std::size_t pos = mFilename.find_last_of('.');
-	if (pos == std::string::npos) {
-		mErrorMsg = "no filename extension (found no '.')";
-		return false;
+	mCurrentParserSelection = getParserSelectionForFilename(filename,
+			mErrorMsg);
+	switch (mCurrentParserSelection) {
+		case TML_PARSER:
+			if (!mTmlParser.setFilename(mFilename)) {
+				mErrorMsg += mTmlParser.getErrorMsg();
+				return false;
+			}
+			return true;
+		case BTML_PARSER:
+			if (!mBtmlParser.setFilename(mFilename)) {
+				mErrorMsg += mBtmlParser.getExtendedErrorMsg();
+				return false;
+			}
+			return true;
+		default:
+			break;
 	}
-	std::string fileExtension = mFilename.substr(pos + 1);
-	if (fileExtension.empty()) {
-		mErrorMsg = "filename extension is empty";
-		return false;
-	}
-	if (fileExtension == "tml") {
-		mCurrentParserSelection = TML_PARSER;
-		return mTmlParser.setFilename(mFilename);
-	}
-	if (fileExtension == "btml") {
-		mCurrentParserSelection = BTML_PARSER;
-		return mBtmlParser.setFilename(mFilename);
-	}
-	mErrorMsg = "file extension '" + fileExtension + "' is not supported";
 	return false;
 }
 
@@ -79,4 +78,27 @@ std::string cfg::TmlBtmlParser::getExtendedErrorMsg() const
 	}
 	// --> mCurrentParserSelection is not TML and not BTML. --> no parser selection
 	return mFilename + ":" + mErrorMsg;
+}
+
+int cfg::TmlBtmlParser::getParserSelectionForFilename(
+		const std::string& filename, std::string& outErrorMsg)
+{
+	std::size_t pos = filename.find_last_of('.');
+	if (pos == std::string::npos) {
+		outErrorMsg = "no filename extension (found no '.')";
+		return 0;
+	}
+	std::string fileExtension = filename.substr(pos + 1);
+	if (fileExtension.empty()) {
+		outErrorMsg = "filename extension is empty";
+		return 0;
+	}
+	if (fileExtension == "tml") {
+		return TML_PARSER;
+	}
+	if (fileExtension == "btml") {
+		return BTML_PARSER;
+	}
+	outErrorMsg = "file extension '" + fileExtension + "' is not supported";
+	return 0;
 }

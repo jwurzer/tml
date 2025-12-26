@@ -22,6 +22,10 @@ namespace cfg
 				bool inclEmptyLines, bool inclComments) override;
 		// return filename with linenumber and error message
 		virtual std::string getExtendedErrorMsg() const override;
+	protected:
+		// 0 for none, 1 for tml parser, 2 for btml parser
+		static int getParserSelectionForFilename(const std::string& filename,
+				std::string& outErrorMsg);
 	private:
 		std::string mFilename;
 		// current parser selection
