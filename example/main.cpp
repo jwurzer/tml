@@ -7,6 +7,7 @@
 #include <cfg/cfg_cppstring.h>
 #include <cfg/cfg_schema.h>
 #include <cfg/parser_file_loader.h>
+#include <cfg/cfg_creator.h>
 #include <tml/tml_string.h>
 #include <json/json_string.h>
 #include <json/json_parser.h>
@@ -62,7 +63,7 @@ namespace
 				"  all-features <in-file> [<out-file>]     ... includes, templates, translations, profiles, variables, expressions\n" <<
 				"  validate <schema-filename> <filename>   ... validate\n" <<
 #ifdef INCLUDE_UNIT_TESTS
-				"  unit-tests                   ... unit-tests\n" <<
+				"  unit-tests <arg>             ... arg: btml, creator\n" <<
 #endif
 				std::endl;
 	}
@@ -778,7 +779,7 @@ namespace
 }
 
 #ifdef INCLUDE_UNIT_TESTS
-static int unitTests();
+static int unitTests(const std::string& testName);
 #endif
 
 int main(int argc, char* argv[])
@@ -1039,7 +1040,17 @@ int main(int argc, char* argv[])
 		return validate(argv[2], argv[3]);
 	}
 	if (command == "unit-tests") {
-		return unitTests();
+#ifdef INCLUDE_UNIT_TESTS
+		if (argc != 3) {
+			std::cerr << "unit-tests command need exactly one argument" << std::endl;
+			printHelp(argv[0]);
+			return 1;
+		}
+		return unitTests(argv[2]);
+#else
+		std::cerr << "command 'unit-tests' is not included at this binary" << std::endl;
+		return 1;
+#endif
 	}
 	std::cerr << "command '" << command << "' is not supported" << std::endl;
 	printHelp(argv[0]);
@@ -1127,10 +1138,88 @@ static int testBtml()
 	return success ? 0 : 1;
 }
 
-static int unitTests()
+// return 0 for success, 1 for fail
+static int testCreator()
+{
+	bool success = true;
+	cfg::CfgCreator cc;
+	cc
+		.nvpInt("a", 1)
+		.nvpInt("b", 11)
+		.comment("After this comment a empty line is added")
+		.empty()
+		.nvpInt("c", 111)
+		.valText("c-without-assign")
+		.valNull().assign().valText("foo")
+		.valInt(1).assign().valBool(true)
+		.nvpInt("d", 1111)
+		.pushObject("sub")
+			.nvpInt("s1", 2)
+			.nvpInt("s2", 22)
+			.nvpInt("s3", 222)
+			.pushObject("sub2")
+				.nvpInt("sb1", 2)
+				.nvpInt("sb2", 22)
+				.pushArray("array").valInt(1).valInt(2).valInt(3).popArray()
+				.nvpInt("sb3after", 222)
+				.pushObject("empty-obj").popObject()
+			.popObject()
+			.nvpInt("s4", 2222)
+		.popObject()
+		.nvpInt("e", 22222)
+		.pushArray("nvp-array")
+			.nvpInt("s1", 2)
+			.nvpInt("s2", 22)
+			.nvpInt("s3", 222)
+			.pushObject("")
+				.nvpInt("s1", 2)
+				.nvpInt("s2", 22)
+				.nvpInt("s3", 222)
+			.popObject()
+		.popArray()
+		.pushArray("root-array")
+			.pushArray("")
+				.valFloat(1.0f).valFloat(2.0f).valFloat(3.0f)
+			.popArray()
+			.pushArray("")
+				.valFloat(1.0f).valFloat(2.0f).valFloat(3.0f)
+			.popArray()
+		.popArray()
+		.pushArray("array-extra")
+			.pushArray("")
+				.pushArray("")
+					.pushArray("")
+					.popArray()
+				.popArray()
+			.popArray()
+		.popArray()
+		.nvpInt("f", 222222)
+	;
+	std::string s = cfg::tmlstring::valueToString(0, cc.getCfg());
+	std::cout << s; // no std::endl here!
+	if (cc.warningsExist()) {
+		std::cout << cc.getWarningsAsString() << std::endl;
+	}
+	else {
+		std::cout << "no warnings" << std::endl;
+	}
+	// return 0 for success, 1 for fail
+	return success ? 0 : 1;
+}
+
+static int unitTests(const std::string& testName)
 {
 	int fail = 0;
-	fail = testBtml() || fail;
+	if (testName == "btml") {
+		fail = testBtml() || fail;
+	}
+	else if (testName == "creator") {
+		fail = testCreator() || fail;
+	}
+	else {
+		fail = 1;
+		std::cout << "'" << testName << "' is not supported" << std::endl;
+	}
 	return fail;
 }
 #endif
