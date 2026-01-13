@@ -13,8 +13,6 @@ namespace
 			if (cfg.mObject.empty()) {
 				cfg.mObject.emplace_back();
 
-				//cfg.mObject.back().setObject();
-				//cfg.mObject.back().setObject("no-name");
 				cfg.mObject.back().mName.setNull();
 				cfg.mObject.back().mValue.setObject();
 			}
@@ -35,6 +33,25 @@ namespace
 cfg::CfgCreator::CfgCreator()
 {
 	mCfg.setObject();
+}
+
+cfg::CfgCreator& cfg::CfgCreator::configParseTextWithQuotes(bool enable)
+{
+	isParseTextWithQuotesForName = enable;
+	isParseTextWithQuotesForValue = enable;
+	return *this;
+}
+
+cfg::CfgCreator& cfg::CfgCreator::configParseTextWithQuotesForName(bool enable)
+{
+	isParseTextWithQuotesForName = enable;
+	return *this;
+}
+
+cfg::CfgCreator& cfg::CfgCreator::configParseTextWithQuotesForValue(bool enable)
+{
+	isParseTextWithQuotesForValue = enable;
+	return *this;
 }
 
 cfg::CfgCreator& cfg::CfgCreator::empty()
@@ -79,6 +96,7 @@ cfg::CfgCreator& cfg::CfgCreator::pushObject(const std::string& name)
 	if (val.isObject()) {
 		val.mObject.emplace_back();
 		val.mObject.back().setObject(name);
+		val.mObject.back().mName.mParseTextWithQuotes = isParseTextWithQuotesForName;
 		++mDeep;
 	}
 	else if (val.isArray()) {
@@ -117,6 +135,7 @@ cfg::CfgCreator& cfg::CfgCreator::pushArray(const std::string& name)
 	if (val.isObject()) {
 		val.mObject.emplace_back();
 		val.mObject.back().setTextArray(name);
+		val.mObject.back().mName.mParseTextWithQuotes = isParseTextWithQuotesForName;
 		++mDeep;
 	}
 	else if (val.isArray()) {
@@ -154,14 +173,14 @@ cfg::CfgCreator& cfg::CfgCreator::nvpNull(const std::string& name)
 	Value& val = getCurrent();
 	if (val.isObject()) {
 		val.mObject.emplace_back();
-		val.mObject.back().mName.setText(name);
+		val.mObject.back().mName.setText(name, isParseTextWithQuotesForName);
 		val.mObject.back().mValue.setNull();
 	}
 	else if (val.isArray()) {
 		val.mArray.emplace_back();
 		val.mArray.back().setObject();
 		val.mArray.back().mObject.emplace_back();
-		val.mArray.back().mObject.back().mName.setText(name);
+		val.mArray.back().mObject.back().mName.setText(name, isParseTextWithQuotesForName);
 		val.mArray.back().mObject.back().mName.setNull();
 	}
 	checkForResetAssign();
@@ -174,12 +193,14 @@ cfg::CfgCreator& cfg::CfgCreator::nvpBool(const std::string& name, bool value)
 	if (val.isObject()) {
 		val.mObject.emplace_back();
 		val.mObject.back().setTextBool(name, value);
+		val.mObject.back().mName.mParseTextWithQuotes = isParseTextWithQuotesForName;
 	}
 	else if (val.isArray()) {
 		val.mArray.emplace_back();
 		val.mArray.back().setObject();
 		val.mArray.back().mObject.emplace_back();
 		val.mArray.back().mObject.back().setTextBool(name, value);
+		val.mArray.back().mObject.back().mName.mParseTextWithQuotes = isParseTextWithQuotesForName;
 	}
 	checkForResetAssign();
 	return *this;
@@ -191,12 +212,14 @@ cfg::CfgCreator& cfg::CfgCreator::nvpFloat(const std::string& name, float value)
 	if (val.isObject()) {
 		val.mObject.emplace_back();
 		val.mObject.back().setTextFloat(name, value);
+		val.mObject.back().mName.mParseTextWithQuotes = isParseTextWithQuotesForName;
 	}
 	else if (val.isArray()) {
 		val.mArray.emplace_back();
 		val.mArray.back().setObject();
 		val.mArray.back().mObject.emplace_back();
 		val.mArray.back().mObject.back().setTextFloat(name, value);
+		val.mArray.back().mObject.back().mName.mParseTextWithQuotes = isParseTextWithQuotesForName;
 	}
 	checkForResetAssign();
 	return *this;
@@ -208,12 +231,14 @@ cfg::CfgCreator& cfg::CfgCreator::nvpInt(const std::string& name, int value)
 	if (val.isObject()) {
 		val.mObject.emplace_back();
 		val.mObject.back().setTextInt(name, value);
+		val.mObject.back().mName.mParseTextWithQuotes = isParseTextWithQuotesForName;
 	}
 	else if (val.isArray()) {
 		val.mArray.emplace_back();
 		val.mArray.back().setObject();
 		val.mArray.back().mObject.emplace_back();
 		val.mArray.back().mObject.back().setTextInt(name, value);
+		val.mArray.back().mObject.back().mName.mParseTextWithQuotes = isParseTextWithQuotesForName;
 	}
 	checkForResetAssign();
 	return *this;
@@ -225,12 +250,16 @@ cfg::CfgCreator& cfg::CfgCreator::nvpText(const std::string& name, const std::st
 	if (val.isObject()) {
 		val.mObject.emplace_back();
 		val.mObject.back().setTextText(name, value);
+		val.mObject.back().mName.mParseTextWithQuotes = isParseTextWithQuotesForName;
+		val.mObject.back().mValue.mParseTextWithQuotes = isParseTextWithQuotesForValue;
 	}
 	else if (val.isArray()) {
 		val.mArray.emplace_back();
 		val.mArray.back().setObject();
 		val.mArray.back().mObject.emplace_back();
 		val.mArray.back().mObject.back().setTextText(name, value);
+		val.mArray.back().mObject.back().mName.mParseTextWithQuotes = isParseTextWithQuotesForName;
+		val.mArray.back().mObject.back().mValue.mParseTextWithQuotes = isParseTextWithQuotesForValue;
 	}
 	checkForResetAssign();
 	return *this;
@@ -346,7 +375,7 @@ cfg::CfgCreator& cfg::CfgCreator::valText(const std::string& value)
 	if (val.isObject()) {
 		if (!mAssign) {
 			val.mObject.emplace_back();
-			val.mObject.back().mName.setText(value);
+			val.mObject.back().mName.setText(value, isParseTextWithQuotesForName);
 		}
 		else {
 			if (val.mObject.empty()) {
@@ -354,13 +383,17 @@ cfg::CfgCreator& cfg::CfgCreator::valText(const std::string& value)
 				val.mObject.back().mName.setNull(); // set unused name to null
 				addWarning("valText: assign is used at an invalid status.");
 			}
-			val.mObject.back().mValue.setText(value);
+			val.mObject.back().mValue.setText(value, isParseTextWithQuotesForValue);
 			mAssign = false;
 		}
 	}
 	else if (val.isArray()) {
 		val.mArray.emplace_back();
 		val.mArray.back().setText(value);
+		// Currently an array is only supported for a value by CfgCreator.
+		// Using an array for the name is currently NOT possible by the CfgCreator.
+		// --> use value
+		val.mArray.back().mParseTextWithQuotes = isParseTextWithQuotesForValue;
 	}
 	checkForResetAssign();
 	return *this;

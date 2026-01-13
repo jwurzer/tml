@@ -49,6 +49,10 @@ namespace cfg
 	public:
 		CfgCreator();
 
+		CfgCreator& configParseTextWithQuotes(bool enable);
+		CfgCreator& configParseTextWithQuotesForName(bool enable);
+		CfgCreator& configParseTextWithQuotesForValue(bool enable);
+
 		// for empty line
 		CfgCreator& empty();
 		CfgCreator& comment(const std::string& comment, bool withSpace = true);
@@ -81,6 +85,9 @@ namespace cfg
 		bool warningsExist() const { return !mWarnings.empty(); }
 		std::string getWarningsAsString() const;
 	private:
+		bool isParseTextWithQuotesForName = false;
+		bool isParseTextWithQuotesForValue = false;
+
 		Value mCfg;
 		unsigned int mDeep = 0;
 		bool mAssign = false;
